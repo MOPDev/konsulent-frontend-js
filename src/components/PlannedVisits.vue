@@ -18,7 +18,8 @@
 				<div class="group-title">
 					<span>{{ expandedGroups.has(group.key) ? '▼' : '▶' }}</span>
 					<h4 v-if="group.key !== 'other'">
-						{{ group.visits[0].konsulentName }} - {{ formatDate(group.date) }}
+						{{ group.visits[0].konsulentName }} - {{ group.visits.length }} -
+						{{ formatDate(group.date) }}
 					</h4>
 					<h4 v-else>Andre besøg</h4>
 				</div>
