@@ -14,13 +14,16 @@
 		</div>
 
 		<div v-for="group in groupedVisits" :key="group.key" class="group-section">
-			<div class="group-header">
-				<h4 v-if="group.key !== 'other'">
-					Gruppe {{ group.key }} - {{ formatDate(group.date) }}
-				</h4>
-				<h4 v-else>Andre besøg</h4>
+			<div class="group-header" @click="toggleGroup(group.key)">
+				<div class="group-title">
+					<span>{{ expandedGroups.has(group.key) ? '▼' : '▶' }}</span>
+					<h4 v-if="group.key !== 'other'">
+						{{ group.visits[0].konsulentName }} - {{ formatDate(group.date) }}
+					</h4>
+					<h4 v-else>Andre besøg</h4>
+				</div>
 
-				<div v-if="group.key !== 'other'" class="group-actions">
+				<div v-if="group.key !== 'other'" class="group-actions" @click.stop>
 					<button @click="downloadGroupExcel(group.key)" class="small-btn">
 						Download Excel
 					</button>
@@ -30,54 +33,57 @@
 					</button>
 				</div>
 			</div>
-
-			<DataTable
-				:ref="(el) => setTableRef(group.key, el)"
-				:data="group.visits"
-				:columns="columns"
-				selectable
-				filterable
-				paginated
-				:page-size="100"
-				v-model="selectedVisitIds"
-				@selection-ids-changed="handleSelectionChange"
-			>
-				<template #cell-konsulentName="{ item }">
-					{{ item.konsulentName }}
-				</template>
-				<template #cell-debitors="{ item }">
-					<div v-for="debitor in item.debitors" :key="debitor.ID">
-						{{ debitor.name }}
-					</div>
-				</template>
-				<template #cell-address="{ item }">
-					{{ formatAddress(item.address) }}
-				</template>
-				<template #cell-visit_date="{ item }">
-					{{ formatDate(item.visit_date) }}
-				</template>
-				<template #cell-group_id="{ item }">
-					<div class="row-actions">
-						<span v-if="item.group_id" class="group-badge">{{ item.group_id }}</span>
-						<button
-							v-if="item.status_id !== 3"
-							@click="openRemoveModal(item)"
-							class="tiny-btn"
-							title="Fjern fra gruppe"
-						>
-							×
-						</button>
-						<button
-							v-if="!item.group_id && item.status_id !== 3"
-							@click="openAddToGroupModal(item)"
-							class="tiny-btn add-btn"
-							title="Tilføj til gruppe"
-						>
-							+
-						</button>
-					</div>
-				</template>
-			</DataTable>
+			<div v-if="expandedGroups.has(group.key)">
+				<DataTable
+					:ref="(el) => setTableRef(group.key, el)"
+					:data="group.visits"
+					:columns="columns"
+					selectable
+					filterable
+					paginated
+					:page-size="100"
+					v-model="selectedVisitIds"
+					@selection-ids-changed="handleSelectionChange"
+				>
+					<template #cell-konsulentName="{ item }">
+						{{ item.konsulentName }}
+					</template>
+					<template #cell-debitors="{ item }">
+						<div v-for="debitor in item.debitors" :key="debitor.ID">
+							{{ debitor.name }}
+						</div>
+					</template>
+					<template #cell-address="{ item }">
+						{{ formatAddress(item.address) }}
+					</template>
+					<template #cell-visit_date="{ item }">
+						{{ formatDate(item.visit_date) }}
+					</template>
+					<template #cell-group_id="{ item }">
+						<div class="row-actions">
+							<span v-if="item.group_id" class="group-badge">{{
+								item.group_id
+							}}</span>
+							<button
+								v-if="item.status_id !== 3"
+								@click="openRemoveModal(item)"
+								class="tiny-btn"
+								title="Fjern fra gruppe"
+							>
+								×
+							</button>
+							<button
+								v-if="!item.group_id && item.status_id !== 3"
+								@click="openAddToGroupModal(item)"
+								class="tiny-btn add-btn"
+								title="Tilføj til gruppe"
+							>
+								+
+							</button>
+						</div>
+					</template>
+				</DataTable>
+			</div>
 		</div>
 
 		<!-- 1. Date Modal (Bootstrap Style) -->
@@ -305,6 +311,8 @@ const selectedVisit = ref(null)
 const newDate = ref('')
 const newUserId = ref('')
 const targetGroupId = ref(null)
+
+const expandedGroups = ref(new Set())
 
 const existingGroups = computed(() => {
 	return groupedVisits.value.filter((g) => g.key !== 'other')
@@ -570,6 +578,16 @@ async function handleDeleteVisits() {
 		error.value = 'Fejl ved sletning af besøg'
 	}
 }
+
+function toggleGroup(key) {
+	if (expandedGroups.value.has(key)) {
+		expandedGroups.value.delete(key)
+	} else {
+		expandedGroups.value.add(key)
+	}
+	// Force reactivity since Set mutations aren't tracked
+	expandedGroups.value = new Set(expandedGroups.value)
+}
 </script>
 
 <style scoped>
@@ -620,6 +638,23 @@ async function handleDeleteVisits() {
 	align-items: center;
 	gap: 0.75rem;
 	margin: 1rem 0 0.5rem 0;
+	cursor: pointer;
+	user-select: none;
+}
+.group-header:hover {
+	background-color: #f9fafb;
+}
+.group-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.toggle-arrow {
+	font-size: 0.75rem;
+	color: #6b7280;
+	width: 1rem;
+	display: inline-block;
 }
 
 .group-section h4 {
