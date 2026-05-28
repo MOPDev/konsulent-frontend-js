@@ -101,6 +101,7 @@ router.beforeEach(async (to, from, next) => {
 			userRight && (SUPER_ROLES.includes(userRight) || to.meta.roles.includes(userRight))
 
 		if (!allowed) {
+			console.warn('Access denied: insufficient permissions') // ✅ log the reason for denial
 			return next('/')
 		}
 	}

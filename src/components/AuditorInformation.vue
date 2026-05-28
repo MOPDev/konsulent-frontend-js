@@ -32,13 +32,8 @@
 <script setup>
 import { computed } from 'vue'
 import VisitCard from './VisitCard.vue'
-import { useAuthStore } from '@/stores/auth.js'
-const ROLES = {
-	ADMIN: 'admin',
-	DEV: 'developer',
-	USER: 'user',
-	AUDITOR: 'auditor',
-}
+import { useAuthStore, USER_RIGHTS } from '@/stores/auth.js'
+
 const props = defineProps({
 	auditor: {
 		// prop name should match usage in parent components
@@ -64,9 +59,9 @@ const visibleVisits = computed(() => {
 	const allVisits = props.auditor?.visits || [] // remove the ? at some point
 	const role = user.value?.rights
 
-	if (role === ROLES.ADMIN || role === ROLES.DEV) {
+	if (role === USER_RIGHTS.ADMIN || role === USER_RIGHTS.DEV) {
 		return allVisits
-	} else if (role === ROLES.USER || role === ROLES.AUDITOR) {
+	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
 		const todayString = getTodayString()
 		return allVisits.filter((visit) => {
 			// Extract only the date part, ignore time and timezone
