@@ -46,6 +46,7 @@ const canVisit = computed(
 
 const buttonLabel = computed(() => {
 	if (canVisit.value) return 'Besøg'
+	if (props.visit.status_id === 2) return 'send brev'
 	if (props.visit.visit_response || props.visit.status_id > 3) return 'Besøgt'
 	return 'Afvent'
 })
