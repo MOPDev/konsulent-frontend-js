@@ -35,6 +35,10 @@
 				</form>
 			</div>
 		</div>
+		<div>
+			<h4>Penneo integration Testing</h4>
+			<button @click="testPenneoIntegration">Test Penneo Integration</button>
+		</div>
 
 		<div
 			v-if="message"
@@ -65,6 +69,25 @@ const ROLE_OPTIONS = [
 	{ value: USER_RIGHTS.ADMIN, label: 'Admin' },
 	{ value: USER_RIGHTS.DEVELOPER, label: 'Dev' },
 ]
+
+// functin to test penneo integration - can be removed later
+//		apiv1.POST("/penneo/start", api.StartPenneoFlow)
+//		apiv1.POST("/penneo/webhook", api.PenneoWebhook)
+//		apiv1.GET("/penneo/events/:caseFileId", api.PenneoSSE)
+
+const testPenneoIntegration = async () => {
+	try {
+		const response = await api.post('/penneo/start')
+		message.value = 'Penneo integration test successful: ' + response.data.message
+		messageError.value = false
+		console.log('Penneo integration test response:', response)
+	} catch (error) {
+		console.error('Penneo integration test error:', error)
+		message.value =
+			'Penneo integration test failed: ' + (error.response?.data?.error || error.message)
+		messageError.value = true
+	}
+}
 
 const generatePassword = () => {
 	const bytes = crypto.getRandomValues(new Uint8Array(9))

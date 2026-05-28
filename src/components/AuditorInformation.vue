@@ -37,6 +37,7 @@ const ROLES = {
 	ADMIN: 'admin',
 	DEV: 'developer',
 	USER: 'user',
+	AUDITOR: 'auditor',
 }
 const props = defineProps({
 	auditor: {
@@ -65,7 +66,7 @@ const visibleVisits = computed(() => {
 
 	if (role === ROLES.ADMIN || role === ROLES.DEV) {
 		return allVisits
-	} else if (role === ROLES.USER) {
+	} else if (role === ROLES.USER || role === ROLES.AUDITOR) {
 		const todayString = getTodayString()
 		return allVisits.filter((visit) => {
 			// Extract only the date part, ignore time and timezone
