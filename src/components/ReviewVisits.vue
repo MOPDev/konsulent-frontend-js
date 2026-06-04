@@ -1,45 +1,79 @@
 <template>
-	<!-- Error Display -->
-	<div v-if="error" class="error">{{ error }}</div>
+	<div>
+		<h3>Gennemgang af besøg</h3>
+		<p class="subtitle">Besøg klar til gennemgang og import i Advopro</p>
 
-	<div class="action-buttons">
-		<button @click="moveToStatus5" :disabled="selectedVisits.length === 0">
-			Flyt valgte besøg til status 5
-		</button>
-		<button @click="requestPdfs" :disabled="selectedVisits.length === 0">
-			Hent PDF for valgte besøg
-		</button>
-	</div>
+		<div v-if="error" class="error">{{ error }}</div>
 
-	<DataTable
-		:data="VisitStatus4"
-		:columns="columns"
-		selectable
-		filterable
-		@selection-ids-changed="handleIdSelection"
-	>
-		<template #cell-debitors="{ item }">
-			<div v-for="debitor in item.debitors" :key="debitor.ID">
-				{{ debitor.name }}
+		<div class="actions">
+			<button @click="moveToStatus5" :disabled="!selectedVisitIds.length">
+				Importer i Advopro ({{ selectedVisitIds.length }})
+			</button>
+			<button @click="requestPdfs" :disabled="!selectedVisitIds.length">
+				Hent PDF for valgte besøg ({{ selectedVisitIds.length }})
+			</button>
+		</div>
+
+		<div v-for="group in groupedVisits" :key="group.key" class="group-section">
+			<div class="group-header" @click="toggleGroup(group.key)">
+				<div class="group-title">
+					<span>{{ expandedGroups.has(group.key) ? '▼' : '▶' }}</span>
+					<h4 v-if="group.key !== 'other'">
+						{{ group.visits[0].konsulentName }} - {{ group.visits.length }} -
+						{{ formatDate(group.date) }}
+					</h4>
+					<h4 v-else>Andre besøg</h4>
+				</div>
 			</div>
-		</template>
-		<template #cell-status="{ item }"> {{ item.status.ID }}: {{ item.status.text }} </template>
-	</DataTable>
+
+			<div v-if="expandedGroups.has(group.key)">
+				<DataTable
+					:ref="(el) => setTableRef(group.key, el)"
+					:data="group.visits"
+					:columns="columns"
+					selectable
+					filterable
+					paginated
+					:page-size="100"
+					v-model="selectedVisitIds"
+					@selection-ids-changed="handleSelectionChange"
+				>
+					<template #cell-konsulentName="{ item }">
+						{{ item.konsulentName }}
+					</template>
+					<template #cell-debitors="{ item }">
+						<div v-for="debitor in item.debitors" :key="debitor.ID">
+							{{ debitor.name }}
+						</div>
+					</template>
+					<template #cell-address="{ item }">
+						{{ formatAddress(item.address) }}
+					</template>
+					<template #cell-visit_date="{ item }">
+						{{ formatDate(item.visit_date) }}
+					</template>
+					<template #cell-status="{ item }">
+						<span v-if="item.status">{{ item.status.ID }}: {{ item.status.text }}</span>
+					</template>
+					<template #cell-group_id="{ item }">
+						<span v-if="item.group_id" class="group-badge">{{ item.group_id }}</span>
+					</template>
+				</DataTable>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/axios'
 import DataTable from './DataTable.vue'
 
-const selectedVisits = ref([])
-const VisitStatus4 = ref([])
-const error = ref(null)
-
 const columns = [
+	{ key: 'ID', label: 'Besøgs ID', sortable: true, filterable: true },
+	{ key: 'konsulentName', label: 'Konsulent', sortable: true, filterable: true },
 	{ key: 'sagsnr', label: 'Sags nummer', sortable: true, filterable: true },
-	{ key: 'ID', label: 'besøgs id', sortable: true, filterable: true },
-	{ key: 'debitors', label: 'Debitorer', sortable: true, filterable: false },
+	{ key: 'debitors', label: 'Debitorer', sortable: false, filterable: false },
 	{ key: 'address', label: 'Adresse', sortable: false, filterable: true },
 	{ key: 'visit_date', label: 'Dato', sortable: true, filterable: true },
 	{
@@ -48,73 +82,136 @@ const columns = [
 		sortable: false,
 		filterable: false,
 	},
-	{ key: 'status', label: 'Status', sortable: false, filterable: true },
 	{ key: 'type.text', label: 'Type', sortable: true, filterable: true },
+	{ key: 'status', label: 'Status', sortable: false, filterable: true },
+	{ key: 'group_id', label: 'Gruppe', sortable: true, filterable: true },
 ]
 
-const fetchVisits = async () => {
-	try {
-		const response = await api.get('/visits/byStatus', {
-			params: { status: 4 },
+const visits = ref([])
+const selectedVisitIds = ref([])
+const error = ref(null)
+const tableRefs = ref({})
+const expandedGroups = ref(new Set())
+
+const setTableRef = (key, el) => {
+	if (el) tableRefs.value[key] = el
+}
+
+const groupedVisits = computed(() => {
+	const groups = {}
+	const other = []
+
+	visits.value.forEach((visit) => {
+		if (visit.group_id && visit.group_id !== 0) {
+			const key = String(visit.group_id)
+			if (!groups[key]) groups[key] = { key, visits: [] }
+			groups[key].visits.push(visit)
+		} else {
+			other.push(visit)
+		}
+	})
+
+	Object.values(groups).forEach((group) => {
+		group.visits.sort((a, b) => (a.stop_nr ?? 0) - (b.stop_nr ?? 0))
+		group.date = group.visits[0]?.visit_date
+	})
+
+	const sortedGroups = Object.values(groups).sort((a, b) => new Date(a.date) - new Date(b.date))
+
+	if (other.length > 0) {
+		other.sort((a, b) => {
+			const dateA = new Date(a.visit_date)
+			const dateB = new Date(b.visit_date)
+			if (dateA - dateB !== 0) return dateA - dateB
+			return (a.visit_time || '').localeCompare(b.visit_time || '')
 		})
-		VisitStatus4.value = response.data.visit
-	} catch (error) {
-		console.error('Error fetching visits:', error)
-		// Optionally, show feedback to user
+		sortedGroups.push({ key: 'other', visits: other, date: null })
+	}
+
+	return sortedGroups
+})
+
+onMounted(fetchVisits)
+
+async function fetchVisits() {
+	try {
+		const response = await api.get('/visits/byStatus', { params: { status: 4 } })
+		visits.value = (response.data.visit || []).map((visit) => ({
+			...visit,
+			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
+		}))
+		error.value = null
+	} catch (err) {
+		console.error('Error fetching visits:', err)
+		error.value = 'Fejl ved hentning af besøg: ' + err.message
 	}
 }
 
-// Fetch list when the component is mounted
-onMounted(fetchVisits)
+function formatAddress(address) {
+	if (!address) return ''
+	return address.replace(/\r?\n/g, ', ')
+}
+
+function formatDate(date) {
+	if (!date) return ''
+	const d = new Date(date)
+	if (isNaN(d)) return ''
+	return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
+}
+
+const handleSelectionChange = (selectedIds) => {
+	selectedVisitIds.value = selectedIds
+}
+
+function toggleGroup(key) {
+	if (expandedGroups.value.has(key)) {
+		expandedGroups.value.delete(key)
+	} else {
+		expandedGroups.value.add(key)
+	}
+	expandedGroups.value = new Set(expandedGroups.value)
+}
 
 function moveToStatus5() {
-	if (selectedVisits.value.length === 0) {
-		error.value = 'Please select at least one visit to move to status 5.'
+	if (!selectedVisitIds.value.length) {
+		error.value = 'Vælg mindst et besøg.'
 		return
 	}
 	error.value = null
 
-	// for testing add a wrong id
-	// selectedVisits.value.push(9999)
-	const visitsToMove = [...selectedVisits.value.map((visit) => visit.ID)]
+	const visitsToMove = [...selectedVisitIds.value]
 
 	api.post('/visit/reviewed', { reviewed_ids: visitsToMove })
 		.then((response) => {
 			const result = response.data
-			// Filter out items with an error
 			const errors = result.filter((item) => item.err !== 'no error')
 			if (errors.length) {
-				// Concatenate all error messages
 				error.value = errors.map((item) => `ID ${item.id}: ${item.err}`).join('; ')
 			} else {
-				selectedVisits.value = []
-				fetchVisits()
+				selectedVisitIds.value = []
+				Object.values(tableRefs.value).forEach((t) => t?.clearSelection())
 				error.value = null
 			}
+			fetchVisits()
 		})
 		.catch((err) => {
-			console.error('Error moving visits to status 5:', err.request.response)
-			error.value = 'Failed to move visits to status 5: ' + err.request.response
+			console.error('Error moving visits to status 5:', err.request?.response)
+			error.value = 'Kunne ikke importere besøg: ' + (err.request?.response || err.message)
 		})
-	fetchVisits()
 }
 
 function requestPdfs() {
-	selectedVisits.value.forEach((visit) => {
-		getPdf(visit.ID)
-	})
+	selectedVisitIds.value.forEach((id) => getPdf(id))
 }
 
 const getPdf = async (id) => {
 	try {
 		const response = await api.get('/visit/pdf', {
-			params: { id: id },
+			params: { id },
 			responseType: 'blob',
 		})
 
-		// Extract filename from Content-Disposition header
 		const disposition = response.headers['content-disposition']
-		console.log(disposition)
 		let filename = 'visit.pdf'
 		if (disposition && disposition.indexOf('filename=') !== -1) {
 			filename = disposition.split('filename=')[1].replace(/["']/g, '')
@@ -127,53 +224,106 @@ const getPdf = async (id) => {
 		document.body.appendChild(link)
 		link.click()
 		document.body.removeChild(link)
-	} catch (error) {
-		console.error('Error fetching PDF:', error)
+		window.URL.revokeObjectURL(url)
+	} catch (err) {
+		console.error('Error fetching PDF:', err)
+		error.value = 'Fejl ved hentning af PDF'
 	}
-}
-
-// Toggle all checkboxes
-function handleIdSelection(selectedIds) {
-	console.log('Selected IDs:', selectedIds)
-
-	selectedVisits.value = selectedIds
-		.map((id) => {
-			const visit = VisitStatus4.value.find((v) => v.ID === id)
-			return visit ? { ...visit } : null
-		})
-		.filter(Boolean)
-	console.log('Selected visits:', selectedVisits.value)
 }
 </script>
 
 <style scoped>
-.action-buttons {
+.subtitle {
+	color: #6b7280;
+	margin-top: -0.5rem;
 	margin-bottom: 1rem;
 }
 
-.action-buttons button {
-	margin-right: 0.5rem;
-	padding: 0.5rem 1rem;
-	cursor: pointer;
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
 }
 
-.action-buttons button:disabled {
+.actions button {
+	padding: 0.5rem 1rem;
+	border: 1px solid #d1d5db;
+	background: white;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	transition: all 0.2s;
+}
+
+.actions button:hover:not(:disabled) {
+	background-color: #f3f4f6;
+	border-color: #9ca3af;
+}
+
+.actions button:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
 .error {
 	color: red;
-	padding: 10px;
+	padding: 0.75rem;
 	background-color: #fee;
 	border: 1px solid #fcc;
-	border-radius: 4px;
-	margin: 10px 0;
+	border-radius: 0.25rem;
+	margin-bottom: 1rem;
 }
 
-.no-data {
-	text-align: center;
-	padding: 20px;
-	color: #666;
+.group-section {
+	margin-bottom: 2rem;
+}
+
+.group-header {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 1rem 0 0.5rem 0;
+	cursor: pointer;
+	user-select: none;
+}
+.group-header:hover {
+	background-color: #f9fafb;
+}
+.group-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.group-section h4 {
+	margin: 0;
+	color: #374151;
+	font-size: 1rem;
+}
+
+.group-badge {
+	display: inline-block;
+	padding: 0.125rem 0.5rem;
+	background-color: #e0e7ff;
+	color: #3730a3;
+	border-radius: 0.25rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+@media (max-width: 480px) {
+	.group-header {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+	.actions {
+		flex-direction: column;
+	}
+	.actions button {
+		width: 100%;
+	}
 }
 </style>
