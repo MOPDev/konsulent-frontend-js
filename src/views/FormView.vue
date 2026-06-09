@@ -7,6 +7,7 @@
 			v-if="visitData?.type?.ID === 1"
 			v-model:formData="formData"
 			:visitData="visitData"
+			:docBlob="docBlob"
 			@submit="() => submitForm(visitData.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
@@ -16,6 +17,7 @@
 			v-if="visitData?.type?.ID === 2"
 			v-model:formData="formData"
 			:visitData="visitData"
+			:docBlob="docBlob"
 			@submit="() => submitForm(visitData.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
@@ -25,6 +27,7 @@
 			v-if="visitData?.type?.ID === 3"
 			v-model:formData="formData"
 			:visitData="visitData"
+			:docBlob="docBlob"
 			@submit="() => submitForm(visitData.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
@@ -34,6 +37,7 @@
 			v-if="visitData?.type?.ID === 4"
 			v-model:formData="formData"
 			:visitData="visitData"
+			:docBlob="docBlob"
 			@submit="() => submitForm(visitData.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
@@ -50,6 +54,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
 import PurchaseForm from '@/components/forms/PurchaseForm.vue'
 import LeasingForm from '@/components/forms/LeasingForm.vue'
 import BlancoForm from '@/components/forms/BlancoForm.vue'
@@ -66,6 +71,7 @@ const isCapturingLocation = ref(false)
 const debtData = ref(null)
 const restgadoAntagetVal = ref(0)
 const startTime = ref(null)
+const docBlob = ref(null) // Store the file here
 
 const formData = reactive({
 	debitor_is_home: null,
@@ -202,20 +208,12 @@ onMounted(async () => {
 		const response = await api.get('/visits/byId', {
 			params: { id: ID },
 		})
+		// document
+		await loadDocument(ID)
 
-		const debtInfo = await api.get('/visits/debt', {
-			params: { VisitId: ID },
-		})
-		if (debtInfo?.data == null) {
-			alert('Kunne ikke finde besøget hos advopro')
-			visitData.value = response.data.visit
-			visitData.value.debt = null
-			debtData.value = null
-		} else {
-			visitData.value = response.data.visit
-			visitData.value.debt = debtInfo?.data[0]
-			debtData.value = debtInfo?.data[0]
-		}
+		visitData.value = response.data.visit
+		visitData.value.debt = null
+		debtData.value = null
 
 		await getLocation()
 	} catch (error) {
@@ -226,6 +224,18 @@ onMounted(async () => {
 	const antaget = parseFloat(debtData.value?.RestgeldAntaget)
 	restgadoAntagetVal.value = antaget === 0 ? debtData.value?.RestgeldVedBrev : antaget
 })
+
+const loadDocument = async (ID) => {
+	try {
+		const response = await api.get('/visits/debt', {
+			params: { VisitId: ID },
+			responseType: 'blob', // Critical
+		})
+		docBlob.value = response.data // Store the blob
+	} catch (err) {
+		console.error('Document loading failed', err)
+	}
+}
 
 async function submitForm(visitId) {
 	if (formData.asset_at_address && formData.images.length === 0) {
@@ -308,9 +318,9 @@ const getLocation = () => {
 		}
 		isCapturingLocation.value = false
 
-		console.log(formData.actual_latitude)
-		console.log(formData.actual_longitude)
-		console.log(formData.pos_accuracy)
+		//console.log(formData.actual_latitude)
+		//console.log(formData.actual_longitude)
+		//console.log(formData.pos_accuracy)
 	}
 
 	watchId = navigator.geolocation.watchPosition(

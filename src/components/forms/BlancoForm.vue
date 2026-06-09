@@ -18,24 +18,11 @@
 		>
 			<span>Debitor: {{ filteredData?.debitors?.[0]?.name ?? '—' }}</span>
 		</button>
-		<div v-if="expanded && filteredData?.debitors?.length">
-			<p>Advopro_debitor_id: {{ filteredData.debitors[0]?.Advopro_debitor_id ?? '—' }}</p>
-			<p>
-				phone:
-				{{ filteredData.debitors[0]?.phone ?? filteredData.debitors[0]?.phone_work ?? '—' }}
-			</p>
-			<p>Mail: {{ filteredData.debitors[0]?.email ?? '—' }}</p>
-			<p>gender: {{ filteredData.debitors[0]?.gender ?? '—' }}</p>
-			<p>age: {{ filteredData.debitors[0]?.age ?? '—' }}</p>
-			<p>AntagetHovedstol: {{ filteredData.debt?.KreditorHovedstol ?? '—' }}</p>
-			<p>RestanceDato: {{ filteredData.debt?.RestanceDato ?? '—' }}</p>
-			<p>Antaget restgæld: {{ filteredData.debt?.RestgeldAntaget ?? '—' }}</p>
-			<p>restgæld ved afsendt brev: {{ filteredData.debt?.RestgeldVedBrev ?? '—' }}</p>
-			<p>Sum af indbetalinger: {{ filteredData.debt?.SumIndbetalinger ?? '—' }}</p>
-			<p>
-				Sum af indbetalinger ved afsendt brev:
-				{{ filteredData.debt?.SumIndbetalingVedBrev ?? '—' }}
-			</p>
+		<div v-if="expanded">
+			<!-- Read-only container for the Word Doc -->
+			<div v-if="docBlob" class="document-preview-wrapper">
+				<div ref="wordContainer" class="docx-preview-container"></div>
+			</div>
 		</div>
 	</div>
 
@@ -367,10 +354,13 @@ potentiel afdrags ordning
 --></template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 import FileUpload from '@/components/forms/FileUpload.vue'
 import SelectField from '@/components/forms/SelectField.vue'
+import { renderAsync } from 'docx-preview'
+
+const wordContainer = ref(null)
 
 const expanded = ref(false)
 
@@ -382,6 +372,7 @@ const props = defineProps({
 	visitData: { type: Object, required: true },
 	formData: { type: Object, required: true },
 	isSubmitting: { type: Boolean, default: false },
+	docBlob: { type: Object, default: null }, // The blob passed from parent
 })
 const emit = defineEmits(['update:formData', 'submit', 'images', 'remove-image'])
 function removeAt(index) {
@@ -396,6 +387,23 @@ const fd = computed({
 	get: () => props.formData,
 	set: (v) => emit('update:formData', v),
 })
+
+// Watch for when the blob is loaded and then render it
+watch(
+	[() => props.docBlob, wordContainer],
+	async ([newBlob, container]) => {
+		if (newBlob && container) {
+			// Clear previous content before rendering
+			container.innerHTML = ''
+			try {
+				await renderAsync(newBlob, container)
+			} catch (e) {
+				console.error('docx-preview error:', e)
+			}
+		}
+	},
+	{ immediate: true },
+)
 
 function calculateAge(birthday) {
 	if (!birthday) return ''
