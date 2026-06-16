@@ -39,12 +39,15 @@ export const useAuthStore = defineStore('auth', {
 	}),
 	getters: {
 		isAuthenticated: (state) => !!state.user,
-		userRights: (state) => state.user?.rights ?? state.user?.role ?? null, // adjust field name to match your API response
+		userRights: (state) => state.user?.rights || state.user?.role || null, // adjust field name to match your API response
 	},
 	actions: {
 		async login(credentials) {
 			const { data } = await api.post('/login', credentials)
+			console.log('Login API response:', JSON.stringify(data))
 			this.user = normalizeUserResponse(data)
+			console.log('normalized user:', JSON.stringify(this.user))
+			console.log('userRights after login:', this.user?.rights ?? this.user?.role)
 			this.initializing = false
 		},
 		async logout() {
