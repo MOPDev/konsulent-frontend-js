@@ -102,7 +102,10 @@ router.beforeEach(async (to, from, next) => {
 
 		if (!allowed) {
 			console.warn('Access denied: insufficient permissions') // ✅ log the reason for denial
-			return next('/')
+			if (!userRight) {
+				authStore.user = null // force logout when no rights assigned
+			}
+			return next('/login')
 		}
 	}
 

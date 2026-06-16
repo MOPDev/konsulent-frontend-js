@@ -42,7 +42,6 @@ async function handleLogin() {
 			username: username.value,
 			password: password.value,
 		})
-		await authStore.fetchUser()
 		if (authStore.isAuthenticated) {
 			console.log('Login successful')
 			router.push('/')
