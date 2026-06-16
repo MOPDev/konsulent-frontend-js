@@ -103,17 +103,18 @@ const fetchAvailableVisits = async () => {
 		// add field called sagvedr which is klientnavn and if klientnavn is SCB then also sagvedr
 		availableVisits.value = availableVisits.value.map((visit) => {
 			const normalizedKlientnavn = visit.klientnavn.replace(/\r\n/g, ' ').trim()
+			const klientRef = normalizedKlientnavn.includes(SCB_NAME)
+				? `SCB - ${visit.sagvedr}`
+				: normalizedKlientnavn.includes(NFD_NAME)
+					? `NFD`
+					: normalizedKlientnavn
 
 			return {
 				...visit,
-				klientRef: normalizedKlientnavn.includes(SCB_NAME)
-					? `SCB - ${visit.sagvedr}`
-					: normalizedKlientnavn.includes(NFD_NAME)
-						? `NFD`
-						: normalizedKlientnavn,
+				klientRef,
+				klientnavn: klientRef, // FIX: set klientnavn to match klientRef for filtering
 			}
 		})
-
 		error.value = null
 	} catch (err) {
 		console.error(err)
