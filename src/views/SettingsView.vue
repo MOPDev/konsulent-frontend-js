@@ -1,8 +1,8 @@
 <template>
 	<div class="settings">
 		<aside>
-			<button @click="store.switchSection('createUser')">Create User</button>
-			<button @click="store.switchSection('updateUser')">Update User</button>
+			<button @click="store.switchSection('createUser')">Opret Bruger</button>
+			<button @click="store.switchSection('updateUser')">Opdater Bruger</button>
 			<br />
 			<br />
 			<br />

@@ -2,12 +2,12 @@
 	<div v-if="isAllowed">
 		<!-- if user is on a phone or tablet then dont show anything below -->
 
-		<button @click="PlannerStore.switchTab('createVisits')">Create Visits</button>
-		<button @click="PlannerStore.switchTab('nonPlannedVisits')">Created Visits</button>
-		<button @click="PlannerStore.switchTab('planVisits')">Plan Visits</button>
-		<button @click="PlannerStore.switchTab('plannedVisits')">Planned Visits</button>
-		<button @click="PlannerStore.switchTab('notVisitedVisits')">Not Visited Visits</button>
-		<button @click="PlannerStore.switchTab('reviewVisits')">Review Visits</button>
+		<button @click="PlannerStore.switchTab('createVisits')">Opret besøg</button>
+		<button @click="PlannerStore.switchTab('nonPlannedVisits')">Oprettede besøg</button>
+		<button @click="PlannerStore.switchTab('planVisits')">Planlæg besøg</button>
+		<button @click="PlannerStore.switchTab('plannedVisits')">Planlagte besøg</button>
+		<button @click="PlannerStore.switchTab('notVisitedVisits')">Ikke besøgt endnu</button>
+		<button @click="PlannerStore.switchTab('reviewVisits')">Gennemgå besøg</button>
 
 		<div style="margin-top: 20px">
 			<br />

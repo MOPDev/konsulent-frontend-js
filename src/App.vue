@@ -9,12 +9,12 @@
 
 		<BCollapse id="navbar-nav-content" is-nav>
 			<BNavbarNav>
-				<BNavItem to="/" v-if="authStore.isAuthenticated">Home</BNavItem>
+				<BNavItem to="/" v-if="authStore.isAuthenticated">Hjem</BNavItem>
 				<BNavItem to="/routeplanner" v-if="authStore.isAuthenticated"
 					>Rute planlægning</BNavItem
 				>
 				<BNavItem to="/login" v-if="!authStore.isAuthenticated">Login</BNavItem>
-				<BNavItem to="/profile" v-if="authStore.isAuthenticated">Profile</BNavItem>
+				<BNavItem to="/profile" v-if="authStore.isAuthenticated">Profil</BNavItem>
 				<BNavItem to="/settings" v-if="authStore.isAuthenticated">Indstillinger</BNavItem>
 			</BNavbarNav>
 		</BCollapse>

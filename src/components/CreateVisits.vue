@@ -1,13 +1,13 @@
 <template>
 	<div v-if="availableVisits.length > 0">
-		<button @click="createVisits" :disabled="isCreateDisabled">Create Visits</button>
+		<button @click="createVisits" :disabled="isCreateDisabled">Opret besøg</button>
 		<!-- visit_type selection drop down menu -->
 		<select v-model="selectedVisitType">
 			<option v-for="type in visitTypes" :key="type.ID" :value="type.ID">
 				{{ type.text }}
 			</option>
 		</select>
-		<p>Selected: {{ selectedVisitIds.length }} visits</p>
+		<p>Valgt: {{ selectedVisitIds.length }} besøg</p>
 
 		<DataTable
 			ref="dataTableRef"

@@ -1,18 +1,27 @@
 <template>
 	<div>
-		<h3>These visits have not yet been planned</h3>
+		<h3>Disse besog er ikke planlagt</h3>
+		<p>De mangler at få en dato for besøg og hvem der skal til at besøge dem</p>
 
 		<!-- Selection Form -->
-		<form @submit.prevent="handlePlanVisits" class="planning-form">
+		<form
+			@submit.prevent="handlePlanVisits"
+			class="planning-form"
+			style="margin-bottom: 10px; margin-top: 10px"
+		>
 			<div class="form-row">
 				<button type="submit" :disabled="!selectedVisits.length || isPlanning">
-					Plan Selected Visits
+					Planlæg Valgte Besøg
 				</button>
 			</div>
 		</form>
 		<!-- Selection Form -->
-		<button @click="handleDeleteVisits" :disabled="!selectedVisits.length || isPlanning">
-			Delete Selected visits
+		<button
+			@click="handleDeleteVisits"
+			:disabled="!selectedVisits.length || isPlanning"
+			style="margin-bottom: 10px"
+		>
+			Slet Valgte Besøg
 		</button>
 
 		<!-- Error Display -->
@@ -70,6 +79,11 @@ const columns = [
 ]
 
 async function handleDeleteVisits() {
+	// first make sure user actually wants this
+	if (!confirm('Er du sikker på, at du vil slette de valgte besøg?')) {
+		return
+	}
+
 	if (!authStore.isAuthenticated) {
 		error.value = 'Du skal være logget ind'
 		authStore.toLoginScreen()

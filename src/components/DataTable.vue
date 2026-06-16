@@ -6,7 +6,7 @@
 				v-for="column in filterableColumns"
 				:key="column.key"
 				v-model="filters[column.key]"
-				:placeholder="`Filter ${column.label}...`"
+				:placeholder="`Filtrer ${column.label}...`"
 				class="filter-input"
 			/>
 		</div>

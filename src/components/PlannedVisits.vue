@@ -558,6 +558,10 @@ async function handleSendLetter() {
 async function handleDeleteVisits() {
 	if (!selectedVisitIds.value.length) return
 
+	if (!confirm('Er du sikker på, at du vil slette de valgte besøg?')) {
+		return
+	}
+
 	error.value = null
 	try {
 		const ops = selectedVisitIds.value.map((id) =>
