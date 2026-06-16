@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<h3>Disse besog er ikke planlagt</h3>
+		<h3>Disse besøg er ikke planlagt</h3>
 		<p>De mangler at få en dato for besøg og hvem der skal til at besøge dem</p>
 
 		<!-- Selection Form -->
@@ -70,11 +70,9 @@ const error = ref()
 
 const columns = [
 	{ key: 'sagsnr', label: 'Sags nummer', sortable: true, filterable: true },
-	{ key: 'ID', label: 'besøgsid', sortable: true, filterable: false },
 	{ key: 'klientnavn', label: 'Klient', sortable: true, filterable: true },
 	{ key: 'debitors', label: 'Debitorer', sortable: false, filterable: true },
 	{ key: 'address', label: 'Adresse', sortable: false, filterable: true },
-	{ key: 'status_id', label: 'StatusId', sortable: false, filterable: false },
 	{ key: 'type.text', label: 'Besøgs Type', sortable: true, filterable: true },
 ]
 
@@ -130,6 +128,14 @@ const fetchCreatedVisits = async () => {
 		plannedVisits.value.forEach((visit) => {
 			selectedDebtors.value[visit.ID] = visit.debitors.map((_, i) => i)
 		})
+
+		plannedVisits.value = plannedVisits.value.map((visit) => ({
+			// transform the type.text to actually be filterable/sortable
+			...visit,
+			'type.text': visit.type.text,
+			// also with the klientnavn
+			klientnavn: String(visit.advopro_klient ?? ''),
+		}))
 
 		error.value = null
 	} catch (err) {
