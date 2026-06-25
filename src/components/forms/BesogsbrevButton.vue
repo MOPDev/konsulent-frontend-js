@@ -2,7 +2,7 @@
 	<div>
 		<button @click="fetchBesogsbrev" :disabled="loading" class="btn">
 			<span v-if="loading">Henter besøgsbrev...</span>
-			<span v-else>Download besøgsbrev</span>
+			<span v-else>Print besøgsbrev</span>
 		</button>
 
 		<p v-if="error" class="error">{{ error }}</p>
@@ -11,11 +11,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import api from '@/utils/axios' // adjust path to your api instance
+import api from '@/utils/axios'
 
 const props = defineProps({
 	visitId: {
-		//type: Number,
 		required: true,
 	},
 })
@@ -28,33 +27,73 @@ const fetchBesogsbrev = async () => {
 	loading.value = true
 	error.value = null
 
+	let url = null
+	let printWindow = null
+
 	try {
 		const response = await api.get(`/visits/${props.visitId}/besogsbrev`, {
-			responseType: 'blob', // important - tells axios to treat response as binary
+			responseType: 'blob',
 		})
 
-		const url = URL.createObjectURL(response.data)
+		// Create a blob URL for the PDF
+		const blob = new Blob([response.data], { type: 'application/pdf' })
+		url = URL.createObjectURL(blob)
 
-		const a = document.createElement('a')
-		a.href = url
-		a.download = `besogsbrev_${props.visitId}.docx`
-		a.click()
+		// Open the PDF in a hidden iframe and trigger print
+		printWindow = window.open(url, '_blank')
 
-		URL.revokeObjectURL(url)
+		if (!printWindow) {
+			// Fallback if popups are blocked - use iframe approach
+			const iframe = document.createElement('iframe')
+			iframe.style.display = 'none'
+			iframe.src = url
+
+			document.body.appendChild(iframe)
+
+			iframe.onload = () => {
+				iframe.contentWindow.focus()
+				iframe.contentWindow.print()
+
+				// Clean up after print dialog closes
+				setTimeout(() => {
+					document.body.removeChild(iframe)
+					URL.revokeObjectURL(url)
+				}, 1000)
+			}
+		} else {
+			// Let the new tab load then trigger print
+			printWindow.onload = () => {
+				printWindow.focus()
+				printWindow.print()
+			}
+
+			// Fallback if onload doesn't fire (some browsers)
+			setTimeout(() => {
+				printWindow.focus()
+				printWindow.print()
+			}, 1000)
+		}
 	} catch (err) {
-		// axios wraps blob errors, so we need to parse it
 		if (err.response?.data instanceof Blob) {
 			const text = await err.response.data.text()
-			const json = JSON.parse(text)
-			error.value = json.error || 'Kunne ikke hente besøgsbrev'
+			try {
+				const json = JSON.parse(text)
+				error.value = json.error || 'Kunne ikke hente besøgsbrev'
+			} catch {
+				error.value = 'Kunne ikke hente besøgsbrev'
+			}
 		} else {
 			error.value = err.message
 		}
+
+		// Clean up blob URL on error
+		if (url) URL.revokeObjectURL(url)
 	} finally {
 		loading.value = false
 	}
 }
 </script>
+
 <style scoped>
 .btn {
 	background-color: #2563eb;
