@@ -17,15 +17,25 @@
 		</td>
 
 		<td>{{ formattedAnkomst }}</td>
+
+		<td v-if="showExtra">{{ visit.sagsnr ?? '—' }}</td>
+		<td v-if="showExtra">
+			<BesogsbrevButton :visitId="props.visit.ID" />
+		</td>
 	</tr>
 </template>
 
 <script setup>
 import router from '@/router'
 import { computed, ref } from 'vue'
+import BesogsbrevButton from './forms/BesogsbrevButton.vue'
 
 const props = defineProps({
 	visit: Object,
+	showExtra: {
+		type: Boolean,
+		default: false,
+	},
 })
 
 const copied = ref(false)
@@ -60,10 +70,7 @@ const buttonClass = computed(() => {
 const formattedAnkomst = computed(() => {
 	const interval = props.visit.visit_interval ?? ''
 	const time = props.visit.visit_time ?? ''
-
-	// Shorten interval from "12:00 - 15:00" to "12-15"
 	const short = interval.replace(/(\d+):\d+\s*-\s*(\d+):\d+/, '$1-$2')
-
 	if (short && time) return `${short} (${time})`
 	if (short) return short
 	if (time) return time
@@ -82,6 +89,11 @@ async function copyAddress() {
 
 function open() {
 	router.push({ name: 'form', params: { id: props.visit.ID } })
+}
+
+function openCase() {
+	// adjust route/logic to your app
+	router.push({ name: 'case', params: { id: props.visit.case_id ?? props.visit.ID } })
 }
 </script>
 
@@ -135,5 +147,19 @@ function open() {
 
 .copy-feedback.visible {
 	opacity: 1;
+}
+
+.action-btn {
+	padding: 6px 10px;
+	border-radius: 6px;
+	border: none;
+	background-color: #1976d2;
+	color: white;
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.action-btn:hover {
+	background-color: #1565c0;
 }
 </style>

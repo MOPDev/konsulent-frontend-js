@@ -1,4 +1,3 @@
-//AuditorInformation.vue
 <template>
 	<div class="auditor-view"></div>
 	<div v-for="group in groupedVisitsByDate" :key="group.date" class="visit-group">
@@ -19,10 +18,17 @@
 						<th>Status</th>
 						<th>Adresse</th>
 						<th>Ankomst</th>
+						<th v-if="isPrivileged">Sagsnr</th>
+						<th v-if="isPrivileged">Handling</th>
 					</tr>
 				</thead>
 				<tbody>
-					<VisitCard v-for="visit in group.visits" :key="visit.id" :visit="visit" />
+					<VisitCard
+						v-for="visit in group.visits"
+						:key="visit.id"
+						:visit="visit"
+						:show-extra="isPrivileged"
+					/>
 				</tbody>
 			</table>
 		</div>
@@ -36,13 +42,11 @@ import { useAuthStore, USER_RIGHTS } from '@/stores/auth.js'
 
 const props = defineProps({
 	auditor: {
-		// prop name should match usage in parent components
 		type: Object,
 		required: true,
 	},
 })
 
-// Helper: get today's date in YYYY-MM-DD
 function getTodayString() {
 	const today = new Date()
 	const yyyy = today.getFullYear()
@@ -52,29 +56,28 @@ function getTodayString() {
 }
 
 const authStore = useAuthStore()
-const user = computed(() => authStore.user) // user could change
+const user = computed(() => authStore.user)
 
-// Only recompute visits to display if props or user change
+const isPrivileged = computed(() => {
+	const role = user.value?.rights
+	return (
+		role === USER_RIGHTS.ADMIN || role === USER_RIGHTS.DEVELOPER || role === USER_RIGHTS.OFFICE
+	)
+})
+
 const visibleVisits = computed(() => {
-	const allVisits = props.auditor?.visits || [] // remove the ? at some point
+	const allVisits = props.auditor?.visits || []
 	const role = user.value?.rights
 
-	if (
-		role === USER_RIGHTS.ADMIN ||
-		role === USER_RIGHTS.DEVELOPER ||
-		role === USER_RIGHTS.OFFICE
-	) {
+	if (isPrivileged.value) {
 		return allVisits
 	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
 		const todayString = getTodayString()
 		return allVisits.filter((visit) => {
-			// Extract only the date part, ignore time and timezone
 			const visitDay = visit.visit_date?.slice(0, 10)
-			const retnStemnt = new Date(visitDay) >= new Date(todayString) && visit.status_id === 3
-			return retnStemnt
+			return new Date(visitDay) >= new Date(todayString) && visit.status_id === 3
 		})
 	} else {
-		// Optional: handle other roles
 		console.error('Unknown user role:', role)
 		return []
 	}
@@ -86,18 +89,15 @@ const timeToMs = (t) => {
 	return ((h * 60 + m) * 60 + s) * 1000
 }
 
-const dayFromUtcISO = (iso) => iso.slice(0, 10) // "YYYY-MM-DD" from ISO-UTC
+const dayFromUtcISO = (iso) => iso.slice(0, 10)
 
-// Group visits by date, sorted by date (newest/oldest as needed)
 const groupedVisitsByDate = computed(() => {
-	// 1) Sort globally by date+time to keep final order stable
 	const sorted = [...visibleVisits.value].sort((a, b) => {
 		const aKey = Date.parse(`${dayFromUtcISO(a.visit_date)}T${a.visit_time || '00:00:00'}Z`)
 		const bKey = Date.parse(`${dayFromUtcISO(b.visit_date)}T${b.visit_time || '00:00:00'}Z`)
 		return aKey - bKey
 	})
 
-	// 2) Group by day
 	const map = new Map()
 	for (const v of sorted) {
 		const day = dayFromUtcISO(v.visit_date)
@@ -105,17 +105,13 @@ const groupedVisitsByDate = computed(() => {
 		map.get(day).push(v)
 	}
 
-	// 3) Ensure each day's items are sorted by visit_time
 	for (const arr of map.values()) {
 		arr.sort((a, b) => timeToMs(a.visit_time) - timeToMs(b.visit_time))
 	}
 
-	// 4) ensure there is only data in the future or today
 	const todayString = getTodayString()
 	for (const [date] of map.entries()) {
-		if (date < todayString) {
-			map.delete(date)
-		}
+		if (date < todayString) map.delete(date)
 	}
 
 	return [...map.entries()].map(([date, visits]) => ({ date, visits }))
