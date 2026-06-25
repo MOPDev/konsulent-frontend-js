@@ -59,7 +59,11 @@ const visibleVisits = computed(() => {
 	const allVisits = props.auditor?.visits || [] // remove the ? at some point
 	const role = user.value?.rights
 
-	if (role === USER_RIGHTS.ADMIN || role === USER_RIGHTS.DEVELOPER) {
+	if (
+		role === USER_RIGHTS.ADMIN ||
+		role === USER_RIGHTS.DEVELOPER ||
+		role === USER_RIGHTS.OFFICE
+	) {
 		return allVisits
 	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
 		const todayString = getTodayString()
