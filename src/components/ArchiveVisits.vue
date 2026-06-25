@@ -67,21 +67,19 @@ import api from '@/utils/axios'
 import DataTable from './DataTable.vue'
 
 const columns = [
-	{ key: 'ID', label: 'Besøgs ID', sortable: true, filterable: true },
+	{ key: 'ID', label: 'ID', sortable: true, filterable: true },
 	{ key: 'konsulentName', label: 'Konsulent', sortable: true, filterable: true },
-	{ key: 'sagsnr', label: 'Sags nummer', copyable: true, sortable: true, filterable: true },
+	{ key: 'sagsnr', label: 'Sagsnr', copyable: true, sortable: true, filterable: true },
 	{ key: 'debitors', label: 'Debitorer', sortable: false, filterable: false },
 	{ key: 'address', label: 'Adresse', sortable: false, filterable: true },
 	{ key: 'visit_date', label: 'Dato', sortable: true, filterable: true },
 	{
 		key: 'visit_response.actual_time',
-		label: 'Besøgs tidspunkt',
+		label: 'Tidspunkt',
 		sortable: false,
 		filterable: false,
 	},
 	{ key: 'type.text', label: 'Type', sortable: true, filterable: true },
-	{ key: 'status', label: 'Status', sortable: false, filterable: true },
-	{ key: 'group_id', label: 'Gruppe', sortable: true, filterable: true },
 ]
 
 const visits = ref([])
