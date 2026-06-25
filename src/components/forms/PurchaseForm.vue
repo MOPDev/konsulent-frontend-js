@@ -168,11 +168,11 @@
 			@remove="removeAt"
 			@update:files="onUpdateFiles"
 		/>
+		<BesogsbrevButton :visit-id="props.visitData.ID" />
 
 		<br />
 		<label
-			>Kommentarer
-			<br />
+			>Kommentarer <br />
 			<textarea
 				v-model.trim="fd.comments"
 				cols="50"
@@ -201,6 +201,7 @@
 </template>
 
 <script setup>
+import BesogsbrevButton from '@/components/forms/BesogsbrevButton.vue'
 import { computed, ref, watch } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 import FileUpload from '@/components/forms/FileUpload.vue'

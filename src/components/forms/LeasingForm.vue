@@ -129,10 +129,11 @@
 			@update:files="onUpdateFiles"
 		/>
 		<br />
-		<label
-			>generelle kommentarer
-			<br />
 
+		<BesogsbrevButton :visit-id="props.visitData.ID" />
+
+		<label
+			>Kommentarer <br />
 			<textarea
 				v-model.trim="fd.comments"
 				cols="50"
@@ -141,7 +142,13 @@
 			></textarea>
 		</label>
 		<br />
-		<button type="submit" :disabled="isSubmitting">Aflever svar</button>
+		<button
+			type="submit"
+			:disabled="isSubmitting"
+			style="padding: 12px 24px; width: 100%; margin-bottom: 80px"
+		>
+			Aflever svar
+		</button>
 	</form>
 
 	<!--
@@ -154,6 +161,7 @@ er bilen tilskade? normale spørgsmål.
 --></template>
 
 <script setup>
+import BesogsbrevButton from '@/components/forms/BesogsbrevButton.vue'
 import { computed, ref, watch } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 import FileUpload from '@/components/forms/FileUpload.vue'
@@ -222,6 +230,7 @@ const filteredData = computed(() => {
 		...d,
 		age: calculateAge(d.birthday),
 	}))
+
 	return { ...visit, debitors }
 })
 </script>

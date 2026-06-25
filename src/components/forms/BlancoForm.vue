@@ -286,10 +286,10 @@
 			@update:files="onUpdateFiles"
 		/>
 		<br />
-		<label
-			>Kommentarer
-			<br />
+		<BesogsbrevButton :visit-id="props.visitData.ID" />
 
+		<label
+			>Kommentarer <br />
 			<textarea
 				v-model.trim="fd.comments"
 				cols="50"
@@ -354,6 +354,7 @@ potentiel afdrags ordning
 --></template>
 
 <script setup>
+import BesogsbrevButton from '@/components/forms/BesogsbrevButton.vue'
 import { computed, ref, watch } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 import FileUpload from '@/components/forms/FileUpload.vue'
