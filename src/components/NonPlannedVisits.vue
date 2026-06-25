@@ -69,7 +69,7 @@ const plannedVisits = ref([])
 const error = ref()
 
 const columns = [
-	{ key: 'sagsnr', label: 'Sags nummer', sortable: true, filterable: true },
+	{ key: 'sagsnr', label: 'Sags nummer', copyable: true, sortable: true, filterable: true },
 	{ key: 'klientnavn', label: 'Klient', sortable: true, filterable: true },
 	{ key: 'debitors', label: 'Debitorer', sortable: false, filterable: true },
 	{ key: 'address', label: 'Adresse', sortable: false, filterable: true },

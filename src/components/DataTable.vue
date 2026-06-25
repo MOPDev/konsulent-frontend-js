@@ -46,14 +46,30 @@
 							@change="toggleSelection(item, $event.target.checked)"
 						/>
 					</td>
-					<td v-for="column in columns" :key="column.key">
+					<td
+						v-for="column in columns"
+						:key="column.key"
+						:class="{ 'copyable-cell': column.copyable }"
+						@click="column.copyable ? copyValue(column.key, item, index) : null"
+					>
 						<slot
 							:name="`cell-${column.key}`"
 							:item="item"
 							:index="index"
 							:value="getNestedValue(item, column.key)"
 						>
-							{{ getNestedValue(item, column.key) }}
+							<template v-if="column.copyable">
+								<span>{{ getNestedValue(item, column.key) }}</span>
+								<span
+									class="copy-feedback"
+									:class="{ visible: isCopied(column.key, item, index) }"
+								>
+									✓ Kopieret
+								</span>
+							</template>
+							<template v-else>
+								{{ getNestedValue(item, column.key) }}
+							</template>
 						</slot>
 					</td>
 				</tr>
@@ -83,16 +99,50 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-	'selection-changed', // legacy: indices
-	'selection-ids-changed', // new: IDs
-	'update:selectedItems', // optional v-model for indices
-	'update:selectedVisitIds', // optional v-model for IDs
+	'selection-changed',
+	'selection-ids-changed',
+	'update:selectedItems',
+	'update:selectedVisitIds',
 ])
+
+// ─── Copy state ───────────────────────────────────────────────────────────────
+// Key format: "columnKey::rowIndex" — lets multiple cells show feedback at once
+const copiedCells = ref(new Set())
+
+function getCellKey(columnKey, item, index) {
+	// Use item ID when available for stability across re-renders
+	const rowId = item.ID ?? `${item.sagsnr}-${index}`
+	return `${columnKey}::${rowId}`
+}
+
+function isCopied(columnKey, item, index) {
+	return copiedCells.value.has(getCellKey(columnKey, item, index))
+}
+
+async function copyValue(columnKey, item, index) {
+	const value = getNestedValue(item, columnKey)
+	if (value == null) return
+
+	try {
+		await navigator.clipboard.writeText(String(value))
+
+		const key = getCellKey(columnKey, item, index)
+		copiedCells.value = new Set(copiedCells.value).add(key) // trigger reactivity
+
+		setTimeout(() => {
+			const next = new Set(copiedCells.value)
+			next.delete(key)
+			copiedCells.value = next
+		}, 2000)
+	} catch (e) {
+		console.error('Copy failed', e)
+	}
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const selectedItems = ref([])
 const selectedVisitIds = ref([])
 
-// Sync with v-model
 watch(
 	() => props.modelValue,
 	(newVal) => {
@@ -107,9 +157,7 @@ const clearSelection = () => {
 	emit('update:modelValue', [])
 }
 
-defineExpose({
-	clearSelection,
-})
+defineExpose({ clearSelection })
 
 const sortKey = ref('')
 const sortOrder = ref('asc')
@@ -121,7 +169,6 @@ const filterableColumns = computed(() => props.columns.filter((col) => col.filte
 const filteredData = computed(() => {
 	let result = [...props.data]
 
-	// Apply filters first
 	Object.entries(filters.value).forEach(([key, value]) => {
 		if (value) {
 			result = result.filter((item) =>
@@ -130,24 +177,20 @@ const filteredData = computed(() => {
 		}
 	})
 
-	// Apply sorting
 	if (sortKey.value) {
 		result.sort((a, b) => {
 			const aVal = a[sortKey.value]
 			const bVal = b[sortKey.value]
 			const modifier = sortOrder.value === 'asc' ? 1 : -1
 
-			// Handle null/undefined values
 			if (aVal == null && bVal == null) return 0
 			if (aVal == null) return 1 * modifier
 			if (bVal == null) return -1 * modifier
 
-			// Number comparison
 			if (typeof aVal === 'number' && typeof bVal === 'number') {
 				return (aVal - bVal) * modifier
 			}
 
-			// String comparison
 			return String(aVal).localeCompare(String(bVal)) * modifier
 		})
 	}
@@ -159,19 +202,17 @@ const totalPages = computed(() => Math.ceil(filteredData.value.length / props.pa
 
 const paginatedData = computed(() => {
 	if (!props.paginated) return filteredData.value
-
 	const start = (currentPage.value - 1) * props.pageSize
 	return filteredData.value.slice(start, start + props.pageSize)
 })
 
-// “all selected” should reflect the current view
 const isSelectAll = computed(() => {
-	const rows = filteredData.value // or paginatedData.value
+	const rows = filteredData.value
 	if (!rows.length) return false
 	const idsOnView = rows.map((r) => r.ID)
 	return idsOnView.every((id) => selectedVisitIds.value.includes(id))
 })
-// Fix the sort function to handle column sortability
+
 const sort = (key) => {
 	const column = props.columns.find((col) => col.key === key)
 	if (!column?.sortable) return
@@ -184,10 +225,9 @@ const sort = (key) => {
 	}
 }
 
-// select/deselect all currently visible rows (use filteredData or paginatedData as you intend)
 const selectAll = (event) => {
 	const checked = event.target.checked
-	const rows = filteredData.value // or paginatedData.value
+	const rows = filteredData.value
 
 	let idsOnView
 	if (rows[0].ID === undefined) {
@@ -197,44 +237,26 @@ const selectAll = (event) => {
 	}
 
 	if (checked) {
-		// IDs
 		const idSet = new Set(selectedVisitIds.value.concat(idsOnView))
 		selectedVisitIds.value = Array.from(idSet)
-		// indices relative to current view (legacy behavior)
 		const viewIdx = rows.map((_, i) => i)
 		const idxSet = new Set(selectedItems.value.concat(viewIdx))
 		selectedItems.value = Array.from(idxSet)
 	} else {
-		// remove only those currently visible
 		const idsToRemove = new Set(idsOnView)
 		selectedVisitIds.value = selectedVisitIds.value.filter((id) => !idsToRemove.has(id))
-		// drop indices of the current view
 		const viewIdx = new Set(rows.map((_, i) => i))
 		selectedItems.value = selectedItems.value.filter((i) => !viewIdx.has(i))
 	}
 }
 
 function isSelected(item) {
-	selectedVisitIds
-
-	let id
-	if (item.ID === undefined) {
-		id = String(item.sagsnr) + String(item.index)
-	} else {
-		id = item.ID
-	}
-
+	const id = item.ID === undefined ? String(item.sagsnr) + String(item.index) : item.ID
 	return selectedVisitIds.value.includes(id)
 }
 
 function toggleSelection(item, checked) {
-	// keep both arrays in sync atomically
-	let id
-	if (item.ID === undefined) {
-		id = String(item.sagsnr) + String(item.index)
-	} else {
-		id = item.ID
-	}
+	const id = item.ID === undefined ? String(item.sagsnr) + String(item.index) : item.ID
 	const idx = paginatedData.value.findIndex((x) => x.ID === id)
 
 	if (checked) {
@@ -246,7 +268,6 @@ function toggleSelection(item, checked) {
 	}
 }
 
-// Reset pagination when data changes
 watch(
 	[sortKey, sortOrder, filters],
 	() => {
@@ -254,8 +275,6 @@ watch(
 	},
 	{ deep: true },
 )
-
-// Also watch for data changes
 watch(
 	() => props.data,
 	() => {
@@ -263,31 +282,51 @@ watch(
 	},
 )
 
-// Add this watcher to emit selection changes
 watch(
 	[selectedItems, selectedVisitIds],
 	([items, ids]) => {
-		// legacy event (don’t break existing parents)
 		emit('selection-changed', items)
-
-		// new parallel event
 		emit('selection-ids-changed', ids)
-
-		// v-model-style updates (optional but recommended)
 		emit('update:selectedItems', items)
 		emit('update:selectedVisitIds', ids)
 	},
 	{ deep: true },
 )
 
-// Add helper function for nested properties
 const getNestedValue = (obj, path) => {
 	return path.split('.').reduce((current, key) => current?.[key], obj)
 }
 </script>
 
 <style scoped>
-/* Container */
+/* ── Copy ──────────────────────────────────────────────────────────────────── */
+.copyable-cell {
+	cursor: pointer;
+	user-select: none;
+}
+
+.copyable-cell:hover {
+	background-color: #eff6ff;
+}
+
+.copyable-cell:active {
+	background-color: #dbeafe;
+}
+
+.copy-feedback {
+	margin-left: 8px;
+	color: #4caf50;
+	font-size: 0.8em;
+	font-weight: 500;
+	opacity: 0;
+	transition: opacity 0.3s;
+}
+
+.copy-feedback.visible {
+	opacity: 1;
+}
+
+/* ── Everything else (unchanged) ───────────────────────────────────────────── */
 .filters {
 	margin-bottom: 1.5rem;
 	display: flex;
@@ -311,7 +350,6 @@ const getNestedValue = (obj, path) => {
 	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Table */
 table {
 	width: 100%;
 	border-collapse: collapse;
@@ -350,7 +388,6 @@ tbody tr:last-child td {
 	border-bottom: none;
 }
 
-/* Sortable columns */
 .sortable {
 	cursor: pointer;
 	user-select: none;
@@ -360,7 +397,6 @@ tbody tr:last-child td {
 .sortable:hover {
 	background-color: #e2e8f0;
 }
-
 .sort-active {
 	background-color: #dbeafe;
 	color: #1e40af;
@@ -372,14 +408,12 @@ tbody tr:last-child td {
 	color: #3b82f6;
 }
 
-/* Checkboxes */
 input[type='checkbox'] {
 	width: 1rem;
 	height: 1rem;
 	cursor: pointer;
 }
 
-/* Pagination */
 .pagination {
 	margin-top: 1.5rem;
 	display: flex;
@@ -407,26 +441,21 @@ input[type='checkbox'] {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
-
 .pagination span {
 	font-size: 0.875rem;
 	color: #6b7280;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
 	.filters {
 		flex-direction: column;
 	}
-
 	.filter-input {
 		width: 100%;
 	}
-
 	table {
 		font-size: 0.875rem;
 	}
-
 	th,
 	td {
 		padding: 0.5rem;

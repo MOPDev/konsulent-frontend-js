@@ -289,7 +289,7 @@ import DataTable from './DataTable.vue'
 const columns = [
 	{ key: 'ID', label: 'Besøgs ID', sortable: true, filterable: true },
 	{ key: 'konsulentName', label: 'Konsulent', sortable: true, filterable: true },
-	{ key: 'sagsnr', label: 'Sags nummer', sortable: true, filterable: true },
+	{ key: 'sagsnr', label: 'Sags nummer', copyable: true, sortable: true, filterable: true },
 	{ key: 'debitors', label: 'Debitorer', sortable: false, filterable: false },
 	{ key: 'address', label: 'Adresse', sortable: false, filterable: true },
 	{ key: 'visit_date', label: 'Dato', sortable: true, filterable: true },
