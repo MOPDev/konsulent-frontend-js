@@ -90,7 +90,7 @@
 
 		<label v-if="fd.asset_at_address">
 			Aktuel km-stand
-			<input v-model.number="fd.odometer_km" type="number" min="0" step="1" required />
+			<input v-model.number="fd.odometer_km" type="number" min="0" step="1" />
 		</label>
 
 		<!-- Bilen på værksted? -->
