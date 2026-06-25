@@ -9,13 +9,22 @@
 
 		<BCollapse id="navbar-nav-content" is-nav>
 			<BNavbarNav>
-				<BNavItem to="/" v-if="authStore.isAuthenticated">Hjem</BNavItem>
 				<BNavItem to="/routeplanner" v-if="authStore.isAuthenticated"
 					>Rute planlægning</BNavItem
 				>
 				<BNavItem to="/login" v-if="!authStore.isAuthenticated">Login</BNavItem>
-				<BNavItem to="/profile" v-if="authStore.isAuthenticated">Profil</BNavItem>
-				<BNavItem to="/settings" v-if="authStore.isAuthenticated">Indstillinger</BNavItem>
+			</BNavbarNav>
+			<BNavbarNav class="ms-auto" v-if="authStore.isAuthenticated">
+				<BNavItemDropdown right no-caret>
+					<template #button-content>
+						<span class="gear-icon">&#9881;</span>
+					</template>
+					<BDropdownItem to="/profile">Profil</BDropdownItem>
+					<BDropdownDivider />
+					<BDropdownItem to="/settings" v-if="isAdminOrDeveloper"
+						>Indstillinger</BDropdownItem
+					>
+				</BNavItemDropdown>
 			</BNavbarNav>
 		</BCollapse>
 	</BNavbar>
@@ -27,11 +36,15 @@
 
 <script setup>
 import { RouterView } from 'vue-router'
+import { computed } from 'vue'
 import {
 	BNavbar,
 	BNavbarBrand,
 	BNavbarNav,
 	BNavItem,
+	BNavItemDropdown,
+	BDropdownItem,
+	BDropdownDivider,
 	BNavbarToggle,
 	BCollapse,
 } from 'bootstrap-vue-next'
@@ -40,6 +53,9 @@ import { useAuthStore } from '@/stores/auth.js'
 import logo from '@/assets/DAI-logo.png'
 
 const authStore = useAuthStore()
+const isAdminOrDeveloper = computed(
+	() => authStore.userRights === 'admin' || authStore.userRights === 'developer',
+)
 </script>
 
 GLOBAL STYLE
@@ -89,6 +105,11 @@ main {
 
 :deep(.nav-link.active) {
 	background-color: rgba(255, 255, 255, 0.3);
+}
+
+.gear-icon {
+	font-size: 1.4rem;
+	line-height: 1;
 }
 
 @media (max-width: 768px) {

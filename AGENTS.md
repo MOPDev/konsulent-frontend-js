@@ -107,6 +107,7 @@ async function downloadGroupExcel(groupId) {
 | NotVisitedVisits.vue | `@selection-ids-changed` | ✅ Correct |
 | ReviewVisits.vue     | `@selection-ids-changed` | ✅ Correct |
 | PlannedVisits.vue    | `@selection-ids-changed` | ✅ Correct |
+| ArchiveVisits.vue    | `@selection-ids-changed` | ✅ Correct |
 
 ## Correct Selection Handler Pattern
 
@@ -124,7 +125,7 @@ const handleSelectionChange = (selectedIds) => {
 | 2         | Planned                                   | PlannedVisits    |
 | 3         | Not visited (letter sent but not visited) | NotVisitedVisits |
 | 4         | Reviewed (visited, awaiting review)       | ReviewVisits     |
-| 5         | Completed (reviewed)                      | -                |
+| 5         | Completed (reviewed)                      | ArchiveVisits    |
 
 ## API Endpoints
 
