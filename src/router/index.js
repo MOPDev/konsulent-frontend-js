@@ -60,6 +60,14 @@ const router = createRouter({
 			},
 		},
 		{
+			path: '/archive',
+			name: 'archive',
+			component: () => import('@/views/ArchiveView.vue'),
+			meta: {
+				roles: RIGHTS_PRESETS.OFFICE,
+			},
+		},
+		{
 			path: '/form/:id',
 			name: 'form',
 			component: () => import('@/views/FormView.vue'),

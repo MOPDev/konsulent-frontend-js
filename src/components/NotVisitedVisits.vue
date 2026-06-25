@@ -117,15 +117,15 @@ const groupedVisits = computed(() => {
 	})
 
 	const sortedGroups = Object.values(groups).sort((a, b) => {
-		return new Date(a.date) - new Date(b.date)
+		return new Date(b.date) - new Date(a.date) // b-a = newest first
 	})
 
 	if (other.length > 0) {
 		other.sort((a, b) => {
 			const dateA = new Date(a.visit_date)
 			const dateB = new Date(b.visit_date)
-			if (dateA - dateB !== 0) return dateA - dateB
-			return (a.visit_time || '').localeCompare(b.visit_time || '')
+			if (dateB - dateA !== 0) return dateB - dateA // b-a = newest first
+			return (b.visit_time || '').localeCompare(a.visit_time || '')
 		})
 		sortedGroups.push({ key: 'other', visits: other, date: null })
 	}

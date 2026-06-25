@@ -116,14 +116,14 @@ const groupedVisits = computed(() => {
 		group.date = group.visits[0]?.visit_date
 	})
 
-	const sortedGroups = Object.values(groups).sort((a, b) => new Date(a.date) - new Date(b.date))
+	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date) - new Date(a.date))
 
 	if (other.length > 0) {
 		other.sort((a, b) => {
 			const dateA = new Date(a.visit_date)
 			const dateB = new Date(b.visit_date)
-			if (dateA - dateB !== 0) return dateA - dateB
-			return (a.visit_time || '').localeCompare(b.visit_time || '')
+			if (dateB - dateA !== 0) return dateB - dateA
+			return (b.visit_time || '').localeCompare(a.visit_time || '')
 		})
 		sortedGroups.push({ key: 'other', visits: other, date: null })
 	}

@@ -8,7 +8,6 @@
 		<button @click="PlannerStore.switchTab('plannedVisits')">Planlagte besøg</button>
 		<button @click="PlannerStore.switchTab('notVisitedVisits')">Ikke besøgt endnu</button>
 		<button @click="PlannerStore.switchTab('reviewVisits')">Gennemgå besøg</button>
-		<button @click="PlannerStore.switchTab('archiveVisits')">Arkiv</button>
 
 		<div style="margin-top: 20px">
 			<br />
@@ -29,7 +28,6 @@ import PlanVisits from '@/components/PlanVisits.vue'
 import PlannedVisits from '@/components/PlannedVisits.vue'
 import NotVisitedVisits from '@/components/NotVisitedVisits.vue'
 import ReviewVisits from '@/components/ReviewVisits.vue'
-import ArchiveVisits from '@/components/ArchiveVisits.vue'
 
 const PlannerStore = usePlannerStore()
 const AuthStore = useAuthStore()
@@ -41,7 +39,6 @@ const components = {
 	plannedVisits: PlannedVisits,
 	notVisitedVisits: NotVisitedVisits,
 	reviewVisits: ReviewVisits,
-	archiveVisits: ArchiveVisits,
 }
 
 const isAllowed = computed(() => {

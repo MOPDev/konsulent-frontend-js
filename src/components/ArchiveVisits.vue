@@ -113,7 +113,7 @@ const groupedVisits = computed(() => {
 		group.date = group.visits[0]?.visit_date
 	})
 
-	const sortedGroups = Object.values(groups).sort((a, b) => new Date(a.date) - new Date(b.date))
+	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date) - new Date(a.date))
 
 	if (other.length > 0) {
 		other.sort((a, b) => {

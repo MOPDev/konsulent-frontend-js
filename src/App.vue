@@ -10,8 +10,9 @@
 		<BCollapse id="navbar-nav-content" is-nav>
 			<BNavbarNav>
 				<BNavItem to="/routeplanner" v-if="authStore.isAuthenticated"
-					>Rute planlægning</BNavItem
+					>Planlægning</BNavItem
 				>
+				<BNavItem to="/archive" v-if="authStore.isAuthenticated">Arkiv</BNavItem>
 				<BNavItem to="/login" v-if="!authStore.isAuthenticated">Login</BNavItem>
 			</BNavbarNav>
 			<BNavbarNav class="ms-auto" v-if="authStore.isAuthenticated">
