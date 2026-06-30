@@ -90,11 +90,6 @@ async function copyAddress() {
 function open() {
 	router.push({ name: 'form', params: { id: props.visit.ID } })
 }
-
-function openCase() {
-	// adjust route/logic to your app
-	router.push({ name: 'case', params: { id: props.visit.case_id ?? props.visit.ID } })
-}
 </script>
 
 <style scoped>

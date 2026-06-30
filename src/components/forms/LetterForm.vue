@@ -1,72 +1,70 @@
 <template>
-	<div style="margin: 16px">
-		<h1>Brev</h1>
-		<p>
-			Du skal bare aflevere brevet til skyldner.
-			<br />
-			Mest sandsynligt i postkassen. Tag gerne et billede af postkassen på addresen hvis
-			navnet ikke står på postkassen.
-		</p>
-	</div>
+	<div class="form-wrapper">
+		<div style="margin: 16px">
+			<h1>Brev</h1>
+			<p>
+				Du skal bare aflevere brevet til skyldner.
+				<br />
+				Mest sandsynligt i postkassen. Tag gerne et billede af postkassen på addresen hvis
+				navnet ikke står på postkassen.
+			</p>
+		</div>
 
-	<div style="margin: 16px">
-		<button
-			class="debitor-toggle"
-			@click="toggleExpanded"
-			:aria-expanded="expanded ? 'true' : 'false'"
-			aria-controls="debitor-panel"
-		>
-			<span>Debitor: {{ filteredData?.debitors?.[0]?.name ?? '—' }}</span>
-		</button>
+		<div style="margin: 16px">
+			<button
+				class="debitor-toggle"
+				@click="toggleExpanded"
+				:aria-expanded="expanded ? 'true' : 'false'"
+				aria-controls="debitor-panel"
+			>
+				<span>Debitor: {{ filteredData?.debitors?.[0]?.name ?? '—' }}</span>
+			</button>
 
-		<div v-if="expanded">
-			<!-- Read-only container for the Word Doc -->
-			<div v-if="docBlob" class="document-preview-wrapper">
-				<div ref="wordContainer" class="docx-preview-container"></div>
+			<div v-if="expanded">
+				<DocxPdfViewer :docBlob="docBlob" height="800px" />
 			</div>
 		</div>
-	</div>
 
-	<form @submit.prevent="emit('submit')">
-		<!-- debitor hjemme? -->
-		<YesNo
-			label="Er debitor hjemme?"
-			name="debitor_is_home"
-			v-model="fd.debitor_is_home"
-			:required="true"
-		/>
+		<form @submit.prevent="emit('submit')">
+			<!-- debitor hjemme? -->
+			<YesNo
+				label="Er debitor hjemme?"
+				name="debitor_is_home"
+				v-model="fd.debitor_is_home"
+				:required="true"
+			/>
 
-		<!-- Billede af postkassen -->
-		<FileUpload
-			id="car-photo"
-			title="Billede af postkassen"
-			hint="Tryk for at tilføje ét billede ad gangen"
-			icon="📷"
-			accept="image/*"
-			:multiple="false"
-			:append-mode="true"
-			:files="formData.images"
-			@images="(e) => emit('images', e)"
-			@remove="removeAt"
-			@update:files="onUpdateFiles"
-		/>
+			<!-- Billede af postkassen -->
+			<FileUpload
+				id="car-photo"
+				title="Billede af postkassen"
+				hint="Tryk for at tilføje ét billede ad gangen"
+				icon="📷"
+				accept="image/*"
+				:multiple="false"
+				:append-mode="true"
+				:files="formData.images"
+				@images="(e) => emit('images', e)"
+				@remove="removeAt"
+				@update:files="onUpdateFiles"
+			/>
 
-		<br />
-		<label
-			>Kommentarer
 			<br />
+			<label
+				>Kommentarer
+				<br />
 
-			<textarea
-				v-model.trim="fd.comments"
-				cols="50"
-				rows="4"
-				placeholder="Evt. noter"
-			></textarea>
-		</label>
-		<br />
-		<button type="submit" :disabled="isSubmitting">Aflever svar</button>
-	</form>
-
+				<textarea
+					v-model.trim="fd.comments"
+					cols="50"
+					rows="4"
+					placeholder="Evt. noter"
+				></textarea>
+			</label>
+			<br />
+			<button type="submit" :disabled="isSubmitting">Aflever svar</button>
+		</form>
+	</div>
 	<!--
 leasing kan man bare tage bilen
 mere målrettet mod aktivet istedet for personen
@@ -78,6 +76,8 @@ er bilen tilskade? normale spørgsmål.
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import DocxPdfViewer from '@/components/DocxPdfViewer.vue'
+
 import YesNo from '@/components/forms/YesNo.vue'
 import FileUpload from './FileUpload.vue'
 import { renderAsync } from 'docx-preview'
@@ -162,5 +162,9 @@ const filteredData = computed(() => {
 }
 .debitor-toggle:hover {
 	text-decoration: underline;
+}
+.form-wrapper {
+	width: 100%;
+	margin: 0 auto;
 }
 </style>

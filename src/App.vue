@@ -73,10 +73,11 @@ button {
 
 <style scoped>
 main {
-	justify-self: center;
 	display: flex;
+	flex-direction: column; /* add this - RouterView children stack vertically */
 	width: 100%;
 	max-width: 1200px;
+	margin: 0 auto; /* center instead of justify-self */
 	padding: 0 1rem;
 }
 

@@ -210,14 +210,16 @@ onMounted(async () => {
 		const response = await api.get('/visits/byId', {
 			params: { id: ID },
 		})
-		// document
-		await loadDocument(ID)
+		const debt = await api.get('/visits/debt', { params: { VisitId: ID } })
 
 		visitData.value = response.data.visit
-		visitData.value.debt = null
-		debtData.value = null
+
+		visitData.value.debt = debt.data[0]
+		debtData.value = debt
 
 		await getLocation()
+
+		loadDocument(ID).catch((err) => console.error('Doc load failed:', err))
 	} catch (error) {
 		console.error('Error fetching visit:', error)
 		errorApi.log('Error fetching visit: ' + error.message)
@@ -230,7 +232,7 @@ onMounted(async () => {
 
 const loadDocument = async (ID) => {
 	try {
-		const response = await api.get('/visits/debt', {
+		const response = await api.get('/visits/document', {
 			params: { VisitId: ID },
 			responseType: 'blob', // Critical
 		})
