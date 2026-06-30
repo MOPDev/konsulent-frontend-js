@@ -383,11 +383,6 @@ const props = defineProps({
 	docBlob: { type: Object, default: null }, // The blob passed from parent
 })
 
-const pdfObjectUrl = computed(() => {
-	if (!props.docBlob) return null
-	return URL.createObjectURL(new Blob([props.docBlob], { type: 'application/pdf' }))
-})
-
 const emit = defineEmits(['update:formData', 'submit', 'images', 'remove-image'])
 function removeAt(index) {
 	// do not mutate here; let the owner (FormView) revoke URLs

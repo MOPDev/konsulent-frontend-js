@@ -4,9 +4,6 @@
 		<div v-if="!docBlob">Indlæser...</div>
 		<div v-else class="pdf-container">
 			<div class="pdf-toolbar">
-				<button @click="prevPage" :disabled="currentPage <= 1">‹</button>
-				<span>{{ currentPage }} / {{ totalPages }}</span>
-				<button @click="nextPage" :disabled="currentPage >= totalPages">›</button>
 				<button @click="zoomOut">−</button>
 				<span>{{ Math.round(scale * 100) }}%</span>
 				<button @click="zoomIn">+</button>
@@ -14,7 +11,12 @@
 				<button @click="isFullscreen = true" class="fullscreen-btn">⛶</button>
 			</div>
 			<div class="canvas-wrapper" ref="canvasWrapper">
-				<canvas ref="pdfCanvas" />
+				<canvas
+					v-for="n in totalPages"
+					:key="n"
+					:ref="(el) => setCanvas(el, n)"
+					class="pdf-page"
+				/>
 			</div>
 		</div>
 
@@ -22,9 +24,6 @@
 		<Teleport to="body">
 			<div v-if="isFullscreen" class="fullscreen-overlay">
 				<div class="pdf-toolbar">
-					<button @click="prevPage" :disabled="currentPage <= 1">‹</button>
-					<span>{{ currentPage }} / {{ totalPages }}</span>
-					<button @click="nextPage" :disabled="currentPage >= totalPages">›</button>
 					<button @click="zoomOut">−</button>
 					<span>{{ Math.round(scale * 100) }}%</span>
 					<button @click="zoomIn">+</button>
@@ -32,7 +31,12 @@
 					<button @click="closeFullscreen" class="close-btn">✕</button>
 				</div>
 				<div class="canvas-wrapper fullscreen-canvas">
-					<canvas ref="pdfCanvasFullscreen" />
+					<canvas
+						v-for="n in totalPages"
+						:key="n"
+						:ref="(el) => setCanvasFullscreen(el, n)"
+						class="pdf-page"
+					/>
 				</div>
 			</div>
 		</Teleport>
@@ -51,15 +55,24 @@ const props = defineProps({
 	height: { type: String, default: '600px' },
 })
 
-const pdfCanvas = ref(null)
-const pdfCanvasFullscreen = ref(null)
 const canvasWrapper = ref(null)
-const currentPage = ref(1)
 const totalPages = ref(0)
 const scale = ref(1.2)
 const isFullscreen = ref(false)
+
+// page -> canvas element maps
+const canvasMap = {}
+const canvasMapFullscreen = {}
+
 let pdfDoc = null
 let objectUrl = null
+
+function setCanvas(el, n) {
+	if (el) canvasMap[n] = el
+}
+function setCanvasFullscreen(el, n) {
+	if (el) canvasMapFullscreen[n] = el
+}
 
 async function loadPdf(blob) {
 	if (objectUrl) URL.revokeObjectURL(objectUrl)
@@ -67,78 +80,72 @@ async function loadPdf(blob) {
 	const arrayBuffer = await blob.arrayBuffer()
 	pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 	totalPages.value = pdfDoc.numPages
-	currentPage.value = 1
-	renderPage(currentPage.value)
+	await nextTick()
+	renderAllPages()
 }
 
-async function renderPage(num) {
+async function renderAllPages(fullscreen = false) {
+	if (!pdfDoc) return
+	for (let n = 1; n <= totalPages.value; n++) {
+		await renderPage(n, fullscreen)
+	}
+}
+
+async function renderPage(num, fullscreen = false) {
 	if (!pdfDoc) return
 	const page = await pdfDoc.getPage(num)
 	const viewport = page.getViewport({ scale: scale.value })
-
-	// render normal
-	if (pdfCanvas.value) {
-		const canvas = pdfCanvas.value
-		canvas.height = viewport.height
-		canvas.width = viewport.width
-		await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
-	}
-
-	// render fullscreen canvas if open
-	if (isFullscreen.value && pdfCanvasFullscreen.value) {
-		const canvas = pdfCanvasFullscreen.value
-		canvas.height = viewport.height
-		canvas.width = viewport.width
-		await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
-	}
+	const map = fullscreen ? canvasMapFullscreen : canvasMap
+	const canvas = map[num]
+	if (!canvas) return
+	canvas.height = viewport.height
+	canvas.width = viewport.width
+	await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
 }
 
-function prevPage() {
-	if (currentPage.value > 1) {
-		currentPage.value--
-		renderPage(currentPage.value)
-	}
-}
-function nextPage() {
-	if (currentPage.value < totalPages.value) {
-		currentPage.value++
-		renderPage(currentPage.value)
-	}
-}
 function zoomIn() {
 	scale.value = +(scale.value + 0.2).toFixed(1)
-	renderPage(currentPage.value)
+	renderAllPages(false)
+	if (isFullscreen.value) renderAllPages(true)
 }
 function zoomOut() {
 	scale.value = Math.max(0.4, +(scale.value - 0.2).toFixed(1))
-	renderPage(currentPage.value)
+	renderAllPages(false)
+	if (isFullscreen.value) renderAllPages(true)
 }
 
 async function closeFullscreen() {
 	isFullscreen.value = false
-	// re-render normal canvas after overlay gone
-	await nextTick()
-	renderPage(currentPage.value)
 }
 
-// when fullscreen opens, render into new canvas
 watch(isFullscreen, async (val) => {
 	if (val) {
 		await nextTick()
-		renderPage(currentPage.value)
+		renderAllPages(true)
 	}
 })
 
-// close on Escape
 function onKeydown(e) {
 	if (e.key === 'Escape') closeFullscreen()
 }
 window.addEventListener('keydown', onKeydown)
 
 function print() {
-	const canvas = isFullscreen.value ? pdfCanvasFullscreen.value : pdfCanvas.value
+	// print all pages from normal canvases
 	const win = window.open('')
-	win.document.write(`<img src="${canvas.toDataURL()}" onload="window.print();window.close()" />`)
+	const imgs = Object.keys(canvasMap)
+		.sort((a, b) => a - b)
+		.map(
+			(n) =>
+				`<img src="${canvasMap[n].toDataURL()}" style="display:block;margin-bottom:8px" />`,
+		)
+		.join('')
+	win.document.write(`<body>${imgs}</body>`)
+	win.document.close()
+	win.onload = () => {
+		win.print()
+		win.close()
+	}
 }
 
 watch(
@@ -201,6 +208,11 @@ onUnmounted(() => {
 	max-height: v-bind(height);
 }
 
+.pdf-page {
+	display: block;
+	margin: 0 auto 8px;
+}
+
 /* Fullscreen overlay */
 .fullscreen-overlay {
 	position: fixed;
@@ -216,10 +228,5 @@ onUnmounted(() => {
 	max-height: none;
 	overflow: auto;
 	-webkit-overflow-scrolling: touch;
-}
-
-canvas {
-	display: block;
-	margin: 0 auto;
 }
 </style>
