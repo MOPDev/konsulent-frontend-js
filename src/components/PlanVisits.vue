@@ -57,6 +57,8 @@
 import { ref, onMounted } from 'vue'
 import * as XLSX from 'xlsx'
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/axios'
+
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -105,6 +107,7 @@ function validateFile(file) {
 
 	// Check file size
 	if (file.size > MAX_FILE_SIZE) {
+		errorApi.log('Attempted to upload a file that is too large: ' + file.name)
 		throw new Error('Filen er for stor. Maksimum størrelse er 10MB')
 	}
 
@@ -144,6 +147,7 @@ function onFileChange(e) {
 				excelColumns.value = Object.keys(json[0] || {})
 			} catch (error) {
 				console.error('Error reading Excel file:', error)
+				errorApi.log('Error reading Excel file: ' + error.message)
 				uploadError.value = 'Kunne ikke læse filen, tjek format!'
 				resetFileData()
 			}
@@ -222,7 +226,7 @@ async function uploadPlannedRoute() {
 		if (fileInput) fileInput.value = ''
 	} catch (error) {
 		console.error('Upload failed:', error)
-
+		errorApi.log('Error uploading planned route: ' + error.message)
 		if (error.response?.status === 401) {
 			authStore.logout()
 			uploadError.value = 'Session udløbet. Log ind igen.'

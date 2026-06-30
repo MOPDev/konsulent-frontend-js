@@ -34,6 +34,8 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/utils/axios.js'
+import { errorApi } from '@/utils/axios'
+
 import AuditorInformation from '@/components/AuditorInformation.vue'
 
 const route = useRoute()
@@ -54,6 +56,7 @@ api.get('/visit-response/all')
 	})
 	.catch((error) => {
 		console.error('Error fetching auditor data:', error)
+		errorApi.log('Error fetching auditor data: ' + error.message)
 		// Fallback to mock data if API call fails
 	})
 </script>

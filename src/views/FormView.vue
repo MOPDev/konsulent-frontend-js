@@ -61,6 +61,7 @@ import BlancoForm from '@/components/forms/BlancoForm.vue'
 import LetterForm from '@/components/forms/LetterForm.vue'
 
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -197,6 +198,7 @@ function removeImageAt(i) {
 			URL.revokeObjectURL(removed.preview)
 		} catch {
 			console.log('an error ocurred')
+			errorApi.log('Error revoking object URL for removed image: ' + removed.name)
 		}
 	}
 }
@@ -218,6 +220,7 @@ onMounted(async () => {
 		await getLocation()
 	} catch (error) {
 		console.error('Error fetching visit:', error)
+		errorApi.log('Error fetching visit: ' + error.message)
 		// Handle error appropriately
 	}
 
@@ -234,6 +237,7 @@ const loadDocument = async (ID) => {
 		docBlob.value = response.data // Store the blob
 	} catch (err) {
 		console.error('Document loading failed', err)
+		errorApi.log('Document loading failed: ' + err.message)
 	}
 }
 
@@ -269,7 +273,8 @@ async function submitForm(visitId) {
 		}
 	} catch (err) {
 		console.error('Error submitting form:', err)
-		alert('Noget gik galt. Prøv igen.')
+		await errorApi.log('Form submission failed: ' + err.message)
+		alert('Noget gik galt: ' + err.message + ' Prøv igen.')
 	} finally {
 		isSubmitting.value = false
 		sendBack()
@@ -286,7 +291,7 @@ const getLocation = () => {
 	}
 
 	if (!navigator.geolocation) {
-		alert('Geolocation ikke understøttet')
+		//alert('Geolocation ikke understøttet')
 		formData.actual_latitude = fallbackLocation.latitude
 		formData.actual_longitude = fallbackLocation.longitude
 		formData.pos_accuracy = fallbackLocation.accuracy
@@ -294,7 +299,7 @@ const getLocation = () => {
 	}
 
 	if (!window.isSecureContext) {
-		alert('Geolocation kræver en sikker forbindelse (HTTPS). Fallback placering bruges.')
+		//alert('Geolocation kræver en sikker forbindelse (HTTPS). Fallback placering bruges.')
 		formData.actual_latitude = fallbackLocation.latitude
 		formData.actual_longitude = fallbackLocation.longitude
 		formData.pos_accuracy = fallbackLocation.accuracy
@@ -333,7 +338,6 @@ const getLocation = () => {
 		},
 		(error) => {
 			console.error('GPS error:', error)
-			alert('Kunne ikke hente præcis placering. Fallback placering bruges.')
 			bestPosition = null
 			finish()
 		},
@@ -348,11 +352,17 @@ const getLocation = () => {
 // image picker in parent
 function handleImageUpload(e) {
 	const files = Array.from(e.target.files)
-	const maxMB = 10
+	const maxMB = 50
 	const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 	files.forEach((file) => {
-		if (!allowed.includes(file.type)) return
-		if (file.size > maxMB * 1024 * 1024) return
+		if (!allowed.includes(file.type)) {
+			errorApi.log(`Unsupported file type: ${file.type}`)
+			return
+		}
+		if (file.size > maxMB * 1024 * 1024) {
+			errorApi.log(`File too large: ${file.name}`)
+			return
+		}
 		formData.images.push({
 			file,
 			preview: URL.createObjectURL(file),

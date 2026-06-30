@@ -111,6 +111,8 @@
 
 <script setup>
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/axios'
+
 import { ref, onMounted } from 'vue'
 import { useAuthStore, USER_RIGHTS } from '@/stores/auth.js'
 
@@ -147,6 +149,7 @@ function fetchUsers() {
 		})
 		.catch((error) => {
 			console.error('Error fetching users:', error)
+			errorApi.log('Error fetching users: ' + error.message)
 		})
 }
 

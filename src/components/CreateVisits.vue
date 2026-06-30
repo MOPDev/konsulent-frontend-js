@@ -45,6 +45,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/axios.js'
+import { errorApi } from '@/utils/axios'
 import DataTable from '@/components/DataTable.vue'
 
 const columns = [
@@ -118,6 +119,7 @@ const fetchAvailableVisits = async () => {
 		error.value = null
 	} catch (err) {
 		console.error(err)
+		errorApi.log('Error fetching available visits: ' + err.message)
 		error.value = 'Failed to fetch available visits'
 		availableVisits.value = []
 	}
@@ -177,6 +179,7 @@ const createVisits = async () => {
 			dataTableRef.value.clearSelection()
 		}
 	} catch (err) {
+		errorApi.log('Error creating visits: ' + err.message)
 		console.error('Failed to create visits:', err)
 		// Consider adding user feedback here
 	}

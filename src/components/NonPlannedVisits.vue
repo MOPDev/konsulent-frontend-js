@@ -54,6 +54,7 @@
 
 <script setup>
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/axios'
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth' // Adjust import path
 import DataTable from '@/components/DataTable.vue'
@@ -101,6 +102,7 @@ async function handleDeleteVisits() {
 		results.forEach((r, i) => {
 			if (r.status !== 'fulfilled') {
 				console.error('Failed to delete', selectedVisits.value[i].id, r.reason)
+				errorApi.log('Error deleting visit: ' + r.reason.message)
 			}
 		})
 
@@ -113,6 +115,7 @@ async function handleDeleteVisits() {
 		console.log('Planning successful')
 	} catch (err) {
 		console.error('Planning failed:', err)
+		errorApi.log('Error deleting visits: ' + err.message)
 	} finally {
 		isPlanning.value = false
 	}
@@ -184,6 +187,7 @@ const handlePlanVisits = async () => {
 
 		console.log('Planning successful:', response.data)
 	} catch (err) {
+		errorApi.log('Error planning visits: ' + err.message)
 		console.error('Planning failed:', err)
 		if (err.response?.status === 401) {
 			authStore.logout()

@@ -67,6 +67,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/axios'
+
 import DataTable from './DataTable.vue'
 
 const columns = [
@@ -144,6 +146,7 @@ async function fetchVisits() {
 	} catch (err) {
 		console.error('Error fetching visits:', err)
 		error.value = 'Fejl ved hentning af besøg: ' + err.message
+		errorApi.log('Error fetching visits: ' + err.message)
 	}
 }
 

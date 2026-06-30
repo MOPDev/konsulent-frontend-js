@@ -34,4 +34,25 @@ export const userApi = {
 	delete: (id) => api.delete(`/users/${id}`),
 }
 
+// Define the error API client
+export const errorApi = {
+	/**
+	 * Logs an error to the backend
+	 * @param {string} errorText - The error message to log
+	 * @returns {Promise} Promise that resolves with the API response
+	 */
+	log: (errorText) => {
+		return api.post('/error', { text: errorText })
+	},
+
+	/**
+	 * Logs an Error object to the backend
+	 * @param {Error} error - The Error object to log
+	 * @returns {Promise} Promise that resolves with the API response
+	 */
+	logError: (error) => {
+		return errorApi.log(error.message)
+	},
+}
+
 export default api

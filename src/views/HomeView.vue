@@ -17,6 +17,7 @@ import { ref } from 'vue'
 import KonsulentCard from '@/components/KonsulentCard.vue'
 import { useAuthStore } from '@/stores/auth.js'
 import api from '@/utils/axios.js'
+import { errorApi } from '@/utils/axios'
 
 const authStore = useAuthStore()
 
@@ -27,7 +28,7 @@ api.get('/visit-response/all')
 		users.value = response.data.users.filter((user) => user.ID !== 1)
 	})
 	.catch((error) => {
-		console.error('Failed to fetch users:', error)
+		errorApi.log('Error fetching users: ' + error.message)
 	})
 </script>
 

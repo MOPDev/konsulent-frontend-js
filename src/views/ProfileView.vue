@@ -169,6 +169,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth.js'
 import api from '@/utils/axios.js'
+import { errorApi } from '@/utils/axios'
 import { useRouter } from 'vue-router' // ✅ add this
 
 const loading = ref(false)
@@ -237,7 +238,7 @@ async function UpdatePassword() {
 		authStore.logout()
 		window.location.reload()
 	} catch (err) {
-		console.error(err)
+		errorApi.log('Error updating password: ' + err.message)
 		const msg =
 			err.response?.data?.error || err.response?.data?.message || 'Kodeordsopdatering fejlede'
 		feedback.value = msg
@@ -262,7 +263,7 @@ async function updateDetails() {
 		error.value = false
 		editing.value = false
 	} catch (err) {
-		console.error(err)
+		errorApi.log('Error updating user details: ' + err.message)
 		feedback.value =
 			'Noget gik galt ved opdatering: ' + (err.response?.data?.error || err.message)
 		error.value = true
