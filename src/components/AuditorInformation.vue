@@ -18,8 +18,8 @@
 						<th>Status</th>
 						<th>Adresse</th>
 						<th>Ankomst</th>
-						<th v-if="isPrivileged">Sagsnr</th>
-						<th v-if="isPrivileged">Handling</th>
+						<th>Sagsnr</th>
+						<th>Handling</th>
 					</tr>
 				</thead>
 				<tbody>

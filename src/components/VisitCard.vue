@@ -18,8 +18,8 @@
 
 		<td>{{ formattedAnkomst }}</td>
 
-		<td v-if="showExtra">{{ visit.sagsnr ?? '—' }}</td>
-		<td v-if="showExtra">
+		<td>{{ visit.sagsnr ?? '—' }}</td>
+		<td>
 			<BesogsbrevButton :visitId="props.visit.ID" />
 		</td>
 	</tr>
