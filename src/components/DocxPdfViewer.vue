@@ -86,9 +86,9 @@ async function loadPdf(blob) {
 
 async function renderAllPages(fullscreen = false) {
 	if (!pdfDoc) return
-	for (let n = 1; n <= totalPages.value; n++) {
-		await renderPage(n, fullscreen)
-	}
+	await Promise.all(
+		Array.from({ length: totalPages.value }, (_, i) => renderPage(i + 1, fullscreen)),
+	)
 }
 
 async function renderPage(num, fullscreen = false) {
