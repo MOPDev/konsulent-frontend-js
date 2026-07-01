@@ -1,11 +1,10 @@
 //BesogsbrevButton.vue
 <template>
 	<div>
-		<button @click="fetchBesogsbrev" :disabled="loading" class="btn">
-			<span v-if="loading">Henter besøgsbrev...</span>
+		<button @click="fetchAndPrint" :disabled="loading" class="btn">
+			<span v-if="loading">Henter dokumenter...</span>
 			<span v-else>Print besøgsbrev</span>
 		</button>
-
 		<p v-if="error" class="error">{{ error }}</p>
 	</div>
 </template>
@@ -15,80 +14,56 @@ import { ref } from 'vue'
 import api from '@/utils/axios'
 
 const props = defineProps({
-	visitId: {
-		required: true,
-	},
+	visitId: { required: true },
 })
 
 const loading = ref(false)
 const error = ref(null)
 
-const fetchBesogsbrev = async () => {
-	console.log('Fetching besogsbrev for visitId:', props.visitId)
+async function fetchAndPrint() {
 	loading.value = true
 	error.value = null
 
-	let url = null
-	let printWindow = null
-
 	try {
-		const response = await api.get(`/visits/${props.visitId}/besogsbrev`, {
+		const response = await api.get(`/visits/besogsbrev/batch?ids=${props.visitId}`, {
 			responseType: 'blob',
 		})
-
-		// Create a blob URL for the PDF
-		const blob = new Blob([response.data], { type: 'application/pdf' })
-		url = URL.createObjectURL(blob)
-
-		// Open the PDF in a hidden iframe and trigger print
-		printWindow = window.open(url, '_blank')
-
-		if (!printWindow) {
-			// Fallback if popups are blocked - use iframe approach
+		const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+		const w = window.open(url, '_blank')
+		if (w) {
+			w.onload = () => {
+				w.focus()
+				w.print()
+			}
+			setTimeout(() => {
+				w.focus()
+				w.print()
+			}, 1000)
+		} else {
 			const iframe = document.createElement('iframe')
 			iframe.style.display = 'none'
 			iframe.src = url
-
 			document.body.appendChild(iframe)
-
 			iframe.onload = () => {
 				iframe.contentWindow.focus()
 				iframe.contentWindow.print()
-
-				// Clean up after print dialog closes
 				setTimeout(() => {
 					document.body.removeChild(iframe)
 					URL.revokeObjectURL(url)
 				}, 1000)
 			}
-		} else {
-			// Let the new tab load then trigger print
-			printWindow.onload = () => {
-				printWindow.focus()
-				printWindow.print()
-			}
-
-			// Fallback if onload doesn't fire (some browsers)
-			setTimeout(() => {
-				printWindow.focus()
-				printWindow.print()
-			}, 1000)
 		}
 	} catch (err) {
 		if (err.response?.data instanceof Blob) {
 			const text = await err.response.data.text()
 			try {
-				const json = JSON.parse(text)
-				error.value = json.error || 'Kunne ikke hente besøgsbrev'
+				error.value = JSON.parse(text).error
 			} catch {
-				error.value = 'Kunne ikke hente besøgsbrev'
+				error.value = 'Kunne ikke hente dokumenter'
 			}
 		} else {
-			error.value = err.message
+			error.value = 'Kunne ikke hente dokumenter'
 		}
-
-		// Clean up blob URL on error
-		if (url) URL.revokeObjectURL(url)
 	} finally {
 		loading.value = false
 	}

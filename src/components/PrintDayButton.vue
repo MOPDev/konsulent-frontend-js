@@ -1,7 +1,7 @@
 <template>
 	<button @click="printAll" :disabled="loading" class="print-day-btn">
 		<span v-if="loading">Henter… (~{{ estimated }}s tilbage)</span>
-		<span v-else>🖨 Print alle besøgsbreve</span>
+		<span v-else>🖨 Print alle dokumenter</span>
 	</button>
 	<p v-if="error" class="error">{{ error }}</p>
 </template>
@@ -18,6 +18,7 @@ const loading = ref(false)
 const error = ref(null)
 const elapsed = ref(0)
 
+// ponytail: 1.5s per visit is a rough guess for docx→pdf; tune if conversions are faster
 const estimated = computed(() =>
 	Math.max(0, Math.ceil(props.visitIds.length * 1.5 - elapsed.value)),
 )
@@ -47,7 +48,7 @@ async function printAll() {
 			}, 1000)
 		}
 	} catch (err) {
-		error.value = 'Fejl ved hentning af besøgsbreve'
+		error.value = 'Fejl ved hentning af dokumenter'
 		console.error(err)
 	} finally {
 		clearInterval(timer)
