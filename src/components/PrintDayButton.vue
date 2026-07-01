@@ -18,7 +18,9 @@ const loading = ref(false)
 const error = ref(null)
 const elapsed = ref(0)
 
-const estimated = computed(() => Math.max(0, Math.ceil(props.visitIds.length * 1 - elapsed.value)))
+const estimated = computed(() =>
+	Math.max(0, Math.ceil(props.visitIds.length * 1.5 - elapsed.value)),
+)
 
 async function printAll() {
 	loading.value = true
