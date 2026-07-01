@@ -1,3 +1,4 @@
+//VisitCard.vue
 <template>
 	<tr style="width: 100%">
 		<td>

@@ -1,3 +1,4 @@
+//BesogsbrevButton.vue
 <template>
 	<div>
 		<button @click="fetchBesogsbrev" :disabled="loading" class="btn">
@@ -96,22 +97,30 @@ const fetchBesogsbrev = async () => {
 
 <style scoped>
 .btn {
-	background-color: #2563eb;
-	color: #ffffff;
-	padding: 0.5rem 1rem;
-	border: none;
-	border-radius: 0.375rem;
-	font-size: 1rem;
+	display: inline-flex;
+	align-items: center;
+	margin-top: 16px;
+	padding: 8px 20px;
+	background: transparent;
+	color: #2563eb;
+	border: 2px solid #2563eb;
+	border-radius: 8px;
+	font-size: 15px;
+	font-weight: 500;
+	font-family: inherit;
 	cursor: pointer;
-	transition: background-color 0.2s ease;
+	transition:
+		background-color 0.15s,
+		color 0.15s;
 }
 
 .btn:hover:not(:disabled) {
-	background-color: #1d4ed8;
+	background: #eff6ff;
 }
 
 .btn:disabled {
-	background-color: #93c5fd;
+	border-color: #93c5fd;
+	color: #93c5fd;
 	cursor: not-allowed;
 }
 

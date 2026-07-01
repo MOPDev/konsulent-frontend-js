@@ -1,15 +1,19 @@
+//AuditorInformation.vue
 <template>
 	<div class="auditor-view"></div>
 	<div v-for="group in groupedVisitsByDate" :key="group.date" class="visit-group">
-		<h3 class="date-header">
-			{{
-				new Date(group.date).toLocaleDateString('da-DK', {
-					day: '2-digit',
-					month: '2-digit',
-					year: 'numeric',
-				})
-			}}
-		</h3>
+		<div class="date-header-row">
+			<h3 class="date-header">
+				{{
+					new Date(group.date).toLocaleDateString('da-DK', {
+						day: '2-digit',
+						month: '2-digit',
+						year: 'numeric',
+					})
+				}}
+			</h3>
+			<PrintDayButton :visitIds="group.visits.map((v) => v.ID)" />
+		</div>
 
 		<div class="table-responsive">
 			<table class="visit-table">
@@ -38,6 +42,7 @@
 <script setup>
 import { computed } from 'vue'
 import VisitCard from './VisitCard.vue'
+import PrintDayButton from './PrintDayButton.vue'
 import { useAuthStore, USER_RIGHTS } from '@/stores/auth.js'
 
 const props = defineProps({
@@ -154,6 +159,12 @@ const groupedVisitsByDate = computed(() => {
 	width: 2rem;
 	text-align: center;
 }
+.date-header-row {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
 .date-header {
 	margin-top: 1.25rem;
 	margin-bottom: 0.125rem;

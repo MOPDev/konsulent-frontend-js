@@ -1,262 +1,61 @@
 <template>
-	<div class="form-wrapper">
-		<div style="margin: 16px">
-			<h1>leasing</h1>
-			<p>
-				Fordi det er en leasingaftale så ejer skyldner ikke bilen, derfor kan man bare tage
-				bilen uden kontrakt.
-			</p>
-			<p>{{ filteredData?.debt?.Fordringsbeskrivelser }}</p>
-			<p>{{ filteredData?.debt?.Sagsfremstillinger }}</p>
-		</div>
+  <div class="form-wrapper">
+    <FormHeader
+      title="leasing"
+      description="Fordi det er en leasingaftale så ejer skyldner ikke bilen, derfor kan man bare tage bilen uden kontrakt."
+      :debt="filteredData?.debt"
+    />
+    <DebitorPanel
+      :debitor-name="filteredData?.debitors?.[0]?.name ?? '—'"
+      :doc-blob="docBlob"
+    />
+    <form @submit.prevent="emit('submit')">
+      <YesNo
+        label="Er debitor hjemme?"
+        name="debitor_is_home"
+        v-model="fd.debitor_is_home"
+        :required="true"
+      />
 
-		<div style="margin: 16px">
-			<button
-				class="debitor-toggle"
-				@click="toggleExpanded"
-				:aria-expanded="expanded ? 'true' : 'false'"
-				aria-controls="debitor-panel"
-			>
-				<span>Debitor: {{ filteredData?.debitors?.[0]?.name ?? '—' }}</span>
-			</button>
-			<div v-if="expanded">
-				<DocxPdfViewer :docBlob="docBlob" height="800px" />
-			</div>
-		</div>
+      <PaymentSection :form-data="fd" />
 
-		<form @submit.prevent="emit('submit')">
-			<!-- debitor hjemme? -->
-			<YesNo
-				label="Er debitor hjemme?"
-				name="debitor_is_home"
-				v-model="fd.debitor_is_home"
-				:required="true"
-			/>
+      <AssetCarSection :form-data="fd" :show-asset-comments="true" />
 
-			<!-- Betaling modtaget? -->
-
-			<YesNo
-				label="Er betaling modtaget?"
-				name="payment_received"
-				v-model="fd.payment_received"
-			/>
-
-			<!-- Bilen til stede på adressen? -->
-			<YesNo
-				label="Er bilen til stede på adressen?"
-				name="asset_at_address"
-				v-model="fd.asset_at_address"
-				:required="true"
-			/>
-
-			<label v-if="fd.asset_at_address">
-				Aktuel km-stand
-				<input v-model.number="fd.odometer_km" type="number" min="0" step="1" />
-			</label>
-
-			<!-- Bilen på værksted? -->
-			<div
-				v-if="
-					!fd.asset_at_address && fd.asset_at_address != undefined && fd.debitor_is_home
-				"
-			>
-				<label
-					>Hvor er bilen lige nu? (værksted,ude og køre)
-					<input
-						v-model.trim="fd.asset_location"
-						type="text"
-						placeholder="Adresse/sted"
-						required
-					/>
-				</label>
-				<label
-					>Hvem kører den?
-					<input
-						v-model.trim="fd.asset_driver"
-						type="text"
-						placeholder="Navn/telefon"
-						required
-					/>
-				</label>
-			</div>
-
-			<!-- Bilen skadet? -->
-
-			<YesNo
-				v-if="fd.asset_at_address || fd.debitor_is_home"
-				label="Er bilen skadet?"
-				name="asset_damaged"
-				v-model="fd.asset_damaged"
-				:required="true"
-			/>
-
-			<!-- Bilen ryddet? -->
-			<YesNo
-				v-if="fd.asset_at_address"
-				label="Er bilen ryddet?"
-				name="asset_clean"
-				v-model="fd.asset_clean"
-				:required="true"
-			/>
-			<div>
-				<label> Kommentarer til aktivet </label>
-				<br />
-				<textarea
-					v-model.trim="fd.asset_comments"
-					cols="50"
-					rows="4"
-					placeholder="Evt. noter"
-				></textarea>
-			</div>
-			<!-- Nøgler givet/modtaget -->
-			<YesNo
-				label="Er nøgler givet til konsulenten?"
-				name="keys_given"
-				v-model="fd.keys_given"
-				:required="true"
-			/>
-
-			<!-- Billeder af bilen -->
-			<FileUpload
-				id="car-photo"
-				title="Billede af bilen og postkassen"
-				hint="Tryk for at tilføje ét billede ad gangen"
-				icon="📷"
-				accept="image/*"
-				:multiple="false"
-				:append-mode="true"
-				:files="formData.images"
-				@images="(e) => emit('images', e)"
-				@remove="removeAt"
-				@update:files="onUpdateFiles"
-			/>
-			<br />
-
-			<BesogsbrevButton :visit-id="props.visitData.ID" />
-
-			<label
-				>Kommentarer <br />
-				<textarea
-					v-model.trim="fd.comments"
-					cols="50"
-					rows="4"
-					placeholder="Evt. noter"
-				></textarea>
-			</label>
-			<br />
-			<button
-				type="submit"
-				:disabled="isSubmitting"
-				style="padding: 12px 24px; width: 100%; margin-bottom: 80px"
-			>
-				Aflever svar
-			</button>
-		</form>
-	</div>
-	<!--
-leasing kan man bare tage bilen
-mere målrettet mod aktivet istedet for personen
-check bokse er bilen skadet? er den ryddet? hvor langt er bilen kørt lige nu?, 
-billeder af bilen 
-er bilen tilstede? er den på værkstedet? hvor er den lige nu? hvis ikke hjemme så hvor og hvem kører den?
-er bilen tilskade? normale spørgsmål.
---></template>
+      <FormActions
+        :form-data="fd"
+        :visit-id="visitData.ID"
+        :is-submitting="isSubmitting"
+        image-title="Billede af bilen og postkassen"
+        @images="(e) => emit('images', e)"
+        @remove-image="(i) => emit('remove-image', i)"
+      />
+    </form>
+  </div>
+</template>
 
 <script setup>
-import BesogsbrevButton from '@/components/forms/BesogsbrevButton.vue'
-import DocxPdfViewer from '@/components/DocxPdfViewer.vue'
-
-import { computed, ref, watch } from 'vue'
+import { useVisitForm } from '@/composables/useVisitForm'
+import FormHeader from '@/components/forms/FormHeader.vue'
+import DebitorPanel from '@/components/forms/DebitorPanel.vue'
+import PaymentSection from '@/components/forms/PaymentSection.vue'
+import AssetCarSection from '@/components/forms/AssetCarSection.vue'
+import FormActions from '@/components/forms/FormActions.vue'
 import YesNo from '@/components/forms/YesNo.vue'
-import FileUpload from '@/components/forms/FileUpload.vue'
-import { renderAsync } from 'docx-preview'
-
-const wordContainer = ref(null)
-
-const expanded = ref(false)
-const toggleExpanded = () => {
-	expanded.value = !expanded.value
-}
 
 const props = defineProps({
-	visitData: { type: Object, required: true },
-	formData: { type: Object, required: true },
-	isSubmitting: { type: Boolean, default: false },
-	docBlob: { type: Object, default: null }, // The blob passed from parent
+  visitData: { type: Object, required: true },
+  formData: { type: Object, required: true },
+  isSubmitting: { type: Boolean, default: false },
+  docBlob: { type: Object, default: null },
 })
 const emit = defineEmits(['update:formData', 'submit', 'images', 'remove-image'])
-function removeAt(index) {
-	// do not mutate here; let the owner (FormView) revoke URLs
-	emit('remove-image', index)
-}
 
-// Watch for when the blob is loaded and then render it
-watch(
-	[() => props.docBlob, wordContainer],
-	async ([newBlob, container]) => {
-		if (newBlob && container) {
-			// Clear previous content before rendering
-			container.innerHTML = ''
-			try {
-				await renderAsync(newBlob, container)
-			} catch (e) {
-				console.error('docx-preview error:', e)
-			}
-		}
-	},
-	{ immediate: true },
-)
-
-function onUpdateFiles(next) {
-	emit('update:formData', { ...props.formData, images: next })
-}
-
-const fd = computed({
-	get: () => props.formData,
-	set: (v) => emit('update:formData', v),
-})
-
-function calculateAge(birthday) {
-	if (!birthday) return ''
-	const birthDate = new Date(birthday)
-	const today = new Date()
-	let age = today.getFullYear() - birthDate.getFullYear()
-	const m = today.getMonth() - birthDate.getMonth()
-	if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-		age--
-	}
-	return age
-}
-
-const filteredData = computed(() => {
-	const visit = props.visitData || {}
-	const debitors = (visit.debitors || []).map((d) => ({
-		...d,
-		age: calculateAge(d.birthday),
-	}))
-
-	return { ...visit, debitors }
-})
+const { fd, filteredData } = useVisitForm(props, emit)
 </script>
+
 <style scoped>
-.debitor-toggle {
-	background: none;
-	border: 0;
-	padding: 0;
-	font: inherit;
-	cursor: pointer;
-}
-.debitor-toggle::after {
-	content: ' ▸'; /* closed */
-}
-.debitor-toggle[aria-expanded='true']::after {
-	content: ' ▾'; /* open */
-}
-.debitor-toggle:hover {
-	text-decoration: underline;
-}
 .form-wrapper {
-	width: 100%;
-	margin: 0 auto;
+  width: 100%;
+  margin: 0 auto;
 }
 </style>
