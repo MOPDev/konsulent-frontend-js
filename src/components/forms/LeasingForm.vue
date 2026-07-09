@@ -11,26 +11,30 @@
 			:doc-blob="docBlob"
 		/>
 		<form @submit.prevent="emit('submit')">
-      <!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
-      <ContactSection :form-data="fd" :show-worker-met="filteredData?.debitors?.some(d => d.is_company)" />
+			<!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
+			<ContactSection
+				:form-data="fd"
+				:show-worker-met="filteredData?.debitors?.some((d) => d.is_company)"
+				:debitors="filteredData?.debitors || []"
+			/>
 
-      <PaymentSection :form-data="fd" :show-amount="true" />
+			<PaymentSection :form-data="fd" :show-amount="true" />
 
-      <AssetCarSection :form-data="fd" />
+			<AssetCarSection :form-data="fd" />
 
-      <!-- ponytail: Add OtherAssetsSection to allow registering other assets/cars found during visit -->
-      <OtherAssetsSection :form-data="fd" />
+			<!-- ponytail: Add OtherAssetsSection to allow registering other assets/cars found during visit -->
+			<OtherAssetsSection :form-data="fd" />
 
-      <FormActions
-        :form-data="fd"
-        :visit-id="visitData.ID"
-        :is-submitting="isSubmitting"
-        image-title="Billede af bilen og postkassen"
-        @images="(e) => emit('images', e)"
-        @remove-image="(i) => emit('remove-image', i)"
-      />
-    </form>
-  </div>
+			<FormActions
+				:form-data="fd"
+				:visit-id="visitData.ID"
+				:is-submitting="isSubmitting"
+				image-title="Billede af bilen og postkassen"
+				@images="(e) => emit('images', e)"
+				@remove-image="(i) => emit('remove-image', i)"
+			/>
+		</form>
+	</div>
 </template>
 
 <script setup>
