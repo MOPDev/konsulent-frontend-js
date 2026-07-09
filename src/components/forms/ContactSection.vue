@@ -83,6 +83,15 @@
 				</div>
 			</Transition>
 		</template>
+		<!-- if nither debitor nor other nor worker is met then deliver the letter -->
+		<div v-if="showletterDelivered" class="mt-3">
+			<YesNo
+				label="Er brevet leveret?"
+				name="LetterDelivered"
+				v-model="fd.contact.LetterDelivered"
+				:required="true"
+			/>
+		</div>
 
 		<div class="field mt-3 mb-2">
 			<label class="field__label">Rettet telefonnummer</label>
@@ -143,6 +152,19 @@ const props = defineProps({
 const fd = computed({
 	get: () => props.formData,
 	set: () => {},
+})
+
+const showletterDelivered = computed(() => {
+	// showWorkerMet means at at least one debitor is a company, so we only show the letter delivered question if no debitor, other, or worker was met
+	if (props.showWorkerMet) {
+		return (
+			fd.value.contact.debitor_met === false &&
+			fd.value.contact.other_met === false &&
+			fd.value.contact.worker_met === false
+		)
+	} else {
+		return fd.value.contact.debitor_met === false && fd.value.contact.other_met === false
+	}
 })
 
 const phoneDebitors = computed(() => {

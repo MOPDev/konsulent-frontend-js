@@ -11,32 +11,21 @@
 		<Transition name="fade-slide" appear>
 			<div v-if="fd.assets.asset_seen" class="mt-3">
 				<YesNo
-					label="Er bilen tilgængelig?"
+					label="Kan man komme til bilen?"
 					name="asset_accessible"
 					v-model="fd.assets.asset_accessible"
 					:required="true"
 				/>
-
-				<fieldset class="mb-3 mt-3">
-					<legend>Aktuel km-stand</legend>
-					<input
-						v-model.number="fd.assets.odometer_km"
-						type="number"
-						min="0"
-						step="1"
-						class="form-control"
-					/>
-				</fieldset>
 
 				<!-- ponytail: Asset status select dropdown mapping to models.AssetQuestions.AssetStatus string -->
 				<fieldset class="mb-3">
 					<legend>Bilens stand</legend>
 					<select v-model="fd.assets.asset_status" class="form-select" required>
 						<option value="" disabled hidden>Vælg stand</option>
-						<option value="Perfect">Perfekt (Perfect)</option>
-						<option value="minor scratches">Mindre ridser (minor scratches)</option>
-						<option value="beaten up">Brugt/skrammet (beaten up)</option>
-						<option value="Totaled">Totalskadet (Totaled)</option>
+						<option value="Perfekt">Perfekt</option>
+						<option value="Mindre ridser">Mindre ridser</option>
+						<option value="Brugt/skrammet">Brugt/skrammet</option>
+						<option value="Totalskadet">Totalskadet</option>
 					</select>
 				</fieldset>
 
@@ -103,24 +92,34 @@
 
 		<Transition name="fade-slide" appear>
 			<div v-if="fd.assets.is_seized" class="mt-3">
+				<fieldset class="mb-3 mt-3">
+					<legend>Aktuel km-stand</legend>
+					<input
+						v-model="formattedOdometer"
+						type="text"
+						inputmode="numeric"
+						class="form-control"
+					/>
+				</fieldset>
+
 				<!-- ponytail: HandoverStrategy select dropdown mapping to models.AssetQuestions.HandoverStrategy -->
 				<fieldset class="mb-3">
 					<legend>Afhentnings-/afleveringsstrategi</legend>
 					<select v-model="fd.assets.handover_strategy" class="form-select" required>
 						<option value="" disabled hidden>Vælg strategi</option>
-						<option value="Auditor Drive-Away">
+						<option value="Konsulent kører bilen væk">
 							Konsulent kører bilen væk
 							<!-- (Auditor Drive-Away) -->
 						</option>
-						<option value="Immediate Towing">
+						<option value="Akut bjærgning/bugsering">
 							Akut bjærgning/bugsering
 							<!-- (Immediate Towing) -->
 						</option>
-						<option value="Leave On Site Locked">
+						<option value="Efterladt låst på stedet">
 							Efterladt låst på stedet
 							<!-- (Leave On Site Locked) -->
 						</option>
-						<option value="Other">Andet (Other)</option>
+						<option value="Andet">Andet (Other)</option>
 					</select>
 				</fieldset>
 
@@ -142,51 +141,51 @@
 						<option value="" disabled hidden>Vælg transportør</option>
 						<option value="Grube (Sjælland)">Grube (Sjælland)</option>
 						<option value="Jens (Jylland)">Jens (Jylland)</option>
-						<option value="Auditor">Konsulent (Auditor)</option>
-						<option value="None">Ingen (None)</option>
-						<option value="Other">Anden transportør (Other)</option>
+						<option value="Konsulent">Konsulent (Auditor)</option>
+						<option value="Ingen">Ingen (None)</option>
+						<option value="Anden transportør">Anden transportør (Other)</option>
 					</select>
+				</fieldset>
+
+				<!-- ponytail: Final vehicle location select dropdown mapping to models.AssetQuestions.FinalVehicleLocation -->
+				<fieldset class="mb-3 mt-3">
+					<legend>Endelig placering af bil</legend>
+					<select v-model="fd.assets.final_vehicle_location" class="form-select" required>
+						<option value="" disabled hidden>Vælg placering</option>
+						<option value="Opbevaringsplads Sjælland">
+							Opbevaringsplads Sjælland
+							<!-- (Towing Storage Yard) -->
+						</option>
+						<option value="Opbevaringsplads Jylland">
+							Opbevaringsplads Jylland
+							<!-- (Towing Storage Yard) -->
+						</option>
+						<option value="Lokal forhandler">
+							Lokal forhandler
+							<!-- (Local Dealership) -->
+						</option>
+						<option value="På skyldners adresse">
+							På skyldners adresse
+							<!-- (At Debtor Address) -->
+						</option>
+						<option value="Andet">
+							Andet
+							<!-- (Other) -->
+						</option>
+					</select>
+				</fieldset>
+
+				<fieldset class="mb-3">
+					<legend>Uddyb placering (f.eks. GPS, båsnummer, nøgleboks)</legend>
+					<textarea
+						v-model.trim="fd.assets.final_vehicle_location_note"
+						rows="3"
+						class="form-control"
+						placeholder="F.eks. Parkeres i bås 42, nøgler i postkasse..."
+					></textarea>
 				</fieldset>
 			</div>
 		</Transition>
-
-		<!-- ponytail: Final vehicle location select dropdown mapping to models.AssetQuestions.FinalVehicleLocation -->
-		<fieldset class="mb-3 mt-3">
-			<legend>Endelig placering af bil</legend>
-			<select v-model="fd.assets.final_vehicle_location" class="form-select" required>
-				<option value="" disabled hidden>Vælg placering</option>
-				<option value="Towing Storage Yard (Sjælland)">
-					Opbevaringsplads Sjælland
-					<!-- (Towing Storage Yard) -->
-				</option>
-				<option value="Towing Storage Yard (Jylland)">
-					Opbevaringsplads Jylland
-					<!-- (Towing Storage Yard) -->
-				</option>
-				<option value="Local Dealership">
-					Lokal forhandler
-					<!-- (Local Dealership) -->
-				</option>
-				<option value="At Debtor Address">
-					På skyldners adresse
-					<!-- (At Debtor Address) -->
-				</option>
-				<option value="Other">
-					Andet
-					<!-- (Other) -->
-				</option>
-			</select>
-		</fieldset>
-
-		<fieldset class="mb-3">
-			<legend>Uddyb placering (f.eks. GPS, båsnummer, nøgleboks)</legend>
-			<textarea
-				v-model.trim="fd.assets.final_vehicle_location_note"
-				rows="3"
-				class="form-control"
-				placeholder="F.eks. Parkeres i bås 42, nøgler i postkasse..."
-			></textarea>
-		</fieldset>
 	</div>
 </template>
 
@@ -201,6 +200,18 @@ const props = defineProps({
 const fd = computed({
 	get: () => props.formData,
 	set: () => {},
+})
+
+const formattedOdometer = computed({
+	get() {
+		const val = fd.value.assets.odometer_km
+		if (val === null || val === undefined || val === '') return ''
+		return new Intl.NumberFormat('da-DK').format(val)
+	},
+	set(str) {
+		const num = parseInt(str.replace(/\./g, ''), 10)
+		fd.value.assets.odometer_km = isNaN(num) ? null : num
+	},
 })
 </script>
 

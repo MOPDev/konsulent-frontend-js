@@ -12,10 +12,9 @@
 				<fieldset class="mb-3">
 					<legend>Hvor meget er betalingen på? (kr.)</legend>
 					<input
-						v-model.number="fd.payment.PaymentAmount"
-						type="number"
-						min="0"
-						step="0.01"
+						v-model="formattedAmount"
+						type="text"
+						inputmode="decimal"
 						class="form-control"
 						required
 					/>
@@ -49,6 +48,22 @@ const props = defineProps({
 const fd = computed({
 	get: () => props.formData,
 	set: () => {},
+})
+
+const formattedAmount = computed({
+	get() {
+		const val = fd.value.payment.PaymentAmount
+		if (val === null || val === undefined || val === '') return ''
+		return new Intl.NumberFormat('da-DK', {
+			minimumFractionDigits: 0,
+			maximumFractionDigits: 2,
+		}).format(val)
+	},
+	set(str) {
+		// ponytail: da-DK only (. thousands, , decimal), extend if locale becomes dynamic
+		const num = parseFloat(str.replace(/\./g, '').replace(',', '.'))
+		fd.value.payment.PaymentAmount = isNaN(num) ? null : num
+	},
 })
 </script>
 

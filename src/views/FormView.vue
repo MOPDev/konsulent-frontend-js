@@ -80,6 +80,7 @@ const formData = reactive({
 	pos_accuracy: null,
 	contact: {
 		mailbox_name: '',
+		LetterDelivered: null,
 		debitor_met: null,
 		other_met: null,
 		other_title: '',
@@ -263,10 +264,8 @@ async function submitForm(visitId) {
 	isSubmitting.value = true
 	try {
 		const now = new Date()
-		// Calculate duration in milliseconds
 		const duration = now - startTime.value
 
-		// Set contract type automatically based on visitData type
 		if (visitData.value?.type?.ID === 1) {
 			formData.assets.contract_type = 'Købekontrakt'
 		} else if (visitData.value?.type?.ID === 2) {
@@ -275,7 +274,6 @@ async function submitForm(visitId) {
 			formData.assets.contract_type = 'Blanco'
 		}
 
-		// ponytail: construct payload from new nested layout
 		const payload = {
 			visit_id: visitId,
 			actual_date: now.toISOString(),
@@ -305,13 +303,16 @@ async function submitForm(visitId) {
 				await api.post(url, fd, { headers: { 'Content-Type': undefined } })
 			}
 		}
+
+		// only leave the form on success
+		sendBack()
 	} catch (err) {
 		console.error('Error submitting form:', err)
 		await errorApi.log('Form submission failed: ' + err.message)
 		alert('Noget gik galt: ' + err.message + ' Prøv igen.')
+		// ponytail: stay on the form so formData survives, user can retry/edit and resubmit
 	} finally {
 		isSubmitting.value = false
-		sendBack()
 	}
 }
 
