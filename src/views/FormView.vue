@@ -75,118 +75,130 @@ const startTime = ref(null)
 const docBlob = ref(null) // Store the file here
 
 const formData = reactive({
-	debitor_is_home: null,
-	civil_status: null,
-	payment_received: null,
-	asset_at_address: null,
-	asset_damaged: null,
-
-	asset_at_workshop: null,
-	asset_clean: null,
-	asset_location: null,
-	asset_driver: null,
-	asset_comments: null,
-	odometer_km: null,
-
-	has_work: null,
-	position: null,
-	salary: null,
-	children_under_18: null,
-	children_over_18: null,
-	comments: null,
-	property_type: null,
-	maintenance_status: null,
-	ownership_status: null,
 	actual_latitude: null,
 	actual_longitude: null,
-	posAccuracy: null,
+	pos_accuracy: null,
+	contact: {
+		mailbox_name: '',
+		debitor_met: null,
+		other_met: null,
+		other_title: '',
+		worker_met: null,
+		worker_title: '',
+		corrected_tlf: '',
+		corrected_mail: '',
+	},
+	payment: {
+		ReceivedPayment: null,
+		PaymentAmount: null,
+		PaymentMethod: '',
+	},
+	assets: {
+		asset_seen: null,
+		asset_accessible: null,
+		asset_status: '',
+		asset_status_note: '',
+		asset_cleanliness: '',
+		asset_cleanliness_note: '',
+		asset_confirmed_owner: null,
+		asset_keys_delivered: null,
+		sf_signed: null,
+		odometer_km: null,
+		contract_type: '',
+		is_seized: null,
+		handover_strategy: '',
+		handover_strategy_note: '',
+		transport_provider: '',
+		final_vehicle_location: '',
+		final_vehicle_location_note: '',
+	},
+	property: {
+		property_type: null,
+		OvergrownGarden: null,
+		MailboxFull: null,
+		BrokenWindows: null,
+		AbandonedVehicles: null,
+		TrashOverflown: null,
+		ForsaleSign: null,
+	},
+	monetary: {
+		civil_status: '',
+		children_over_18: null,
+		children_under_18: null,
+		has_work: null,
+		position: '',
+		net_salary_min: null,
+		net_salary_max: null,
+		income_payment_min: null,
+		income_payment_max: null,
+		monthly_disposable_min: null,
+		monthly_disposable_max: null,
+		debt_amount_paid: null,
+	},
+	other_assets: [],
 	images: [],
-	payment_received_amount: null,
-	has_children: null,
-	sf_signed: null,
-	se_signed: null,
-	keys_given: null,
-	additional_debt: null,
-	creditor: null,
-	debt_amount: null,
-	settlement: null,
-	creditor_2: null,
-	debt_amount_2: null,
-	settlement_2: null,
-	income_payment: null,
-	monthly_disposable_amount: null,
+	comments: '',
 })
 
+// ponytail: updated watches to react to new nested formData layout
 watch(
-	() => formData.asset_at_address,
+	() => formData.assets.asset_seen,
 	(newVal) => {
 		if (newVal === false || newVal === null) {
-			formData.odometer_km = null
-			formData.asset_clean = null
-			formData.asset_location = null
-			formData.asset_driver = null
+			formData.assets.odometer_km = null
+			formData.assets.asset_accessible = null
+			formData.assets.asset_status = ''
+			formData.assets.asset_status_note = ''
+			formData.assets.asset_cleanliness = ''
+			formData.assets.asset_cleanliness_note = ''
 		}
 	},
 )
 
 watch(
-	() => formData.debitor_is_home,
+	() => formData.contact.debitor_met,
 	(newVal) => {
 		if (newVal === false || newVal === null) {
-			formData.civil_status = null
-			formData.ownership_status = null
-			formData.has_work = null
-			formData.has_children = null
-			formData.sf_signed = null
-			formData.se_signed = null
-			formData.position = null
-			formData.salary = null
-			formData.children_under_18 = null
-			formData.asset_damaged = null
-			formData.asset_location = null
-			formData.asset_driver = null
+			formData.monetary.civil_status = ''
+			formData.monetary.children_under_18 = null
+			formData.monetary.children_over_18 = null
+			formData.monetary.has_work = null
+			formData.monetary.position = ''
+			formData.monetary.net_salary_min = null
+			formData.monetary.net_salary_max = null
+			formData.assets.sf_signed = null
 		}
 	},
 )
 
 watch(
-	() => formData.has_work,
+	() => formData.monetary.has_work,
 	(newVal) => {
 		if (newVal === false || newVal === null) {
-			formData.position = null
-			formData.salary = null
+			formData.monetary.position = ''
+			formData.monetary.net_salary_min = null
+			formData.monetary.net_salary_max = null
 		}
 	},
 )
 
 watch(
-	() => formData.payment_received,
+	() => formData.payment.ReceivedPayment,
 	(newVal) => {
 		if (newVal === false || newVal === null) {
-			formData.payment_received_amount = null
+			formData.payment.PaymentAmount = null
+			formData.payment.PaymentMethod = ''
 		}
 	},
 )
 
 watch(
-	() => formData.has_children,
+	() => formData.assets.is_seized,
 	(newVal) => {
 		if (newVal === false || newVal === null) {
-			formData.children_under_18 = null
-		}
-	},
-)
-
-watch(
-	() => formData.additional_debt,
-	(newVal) => {
-		if (newVal === false || newVal === null) {
-			formData.creditor = null
-			formData.debt_amount = null
-			formData.settlement = null
-			formData.creditor_2 = null
-			formData.debt_amount_2 = null
-			formData.settlement_2 = null
+			formData.assets.handover_strategy = ''
+			formData.assets.handover_strategy_note = ''
+			formData.assets.transport_provider = ''
 		}
 	},
 )
@@ -244,7 +256,7 @@ const loadDocument = async (ID) => {
 }
 
 async function submitForm(visitId) {
-	if (formData.asset_at_address && formData.images.length === 0) {
+	if (formData.assets.asset_seen && formData.images.length === 0) {
 		alert('Du skal tilføje mindst ét billede når køretøjet er til stede.')
 		return
 	}
@@ -253,12 +265,32 @@ async function submitForm(visitId) {
 		const now = new Date()
 		// Calculate duration in milliseconds
 		const duration = now - startTime.value
+
+		// Set contract type automatically based on visitData type
+		if (visitData.value?.type?.ID === 1) {
+			formData.assets.contract_type = 'Købekontrakt'
+		} else if (visitData.value?.type?.ID === 2) {
+			formData.assets.contract_type = 'Leasing'
+		} else if (visitData.value?.type?.ID === 3) {
+			formData.assets.contract_type = 'Blanco'
+		}
+
+		// ponytail: construct payload from new nested layout
 		const payload = {
 			visit_id: visitId,
 			actual_date: now.toISOString(),
 			actual_time: now.toTimeString().slice(0, 8),
 			duration: duration,
-			...Object.fromEntries(Object.entries(formData).filter(([k]) => k !== 'images')),
+			actual_latitude: formData.actual_latitude,
+			actual_longitude: formData.actual_longitude,
+			pos_accuracy: formData.pos_accuracy,
+			contact: formData.contact,
+			payment: formData.payment,
+			assets: formData.assets,
+			property: formData.property,
+			monetary: formData.monetary,
+			other_assets: formData.other_assets,
+			comments: formData.comments,
 		}
 		const { data } = await api.post('/visit-response/create', payload)
 

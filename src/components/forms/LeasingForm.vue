@@ -1,25 +1,25 @@
+<!-- src/components/forms/LeasingForm.vue -->
 <template>
-  <div class="form-wrapper">
-    <FormHeader
-      title="leasing"
-      description="Fordi det er en leasingaftale så ejer skyldner ikke bilen, derfor kan man bare tage bilen uden kontrakt."
-      :debt="filteredData?.debt"
-    />
-    <DebitorPanel
-      :debitor-name="filteredData?.debitors?.[0]?.name ?? '—'"
-      :doc-blob="docBlob"
-    />
-    <form @submit.prevent="emit('submit')">
-      <YesNo
-        label="Er debitor hjemme?"
-        name="debitor_is_home"
-        v-model="fd.debitor_is_home"
-        :required="true"
-      />
+	<div class="form-wrapper">
+		<FormHeader
+			title="Leasing"
+			description="Fordi det er en leasingaftale, ejer skyldner ikke bilen. Derfor kan bilen tages/indrages uden skyldners kontrakt."
+			:debt="filteredData?.debt"
+		/>
+		<DebitorPanel
+			:debitor-name="filteredData?.debitors?.[0]?.name ?? '—'"
+			:doc-blob="docBlob"
+		/>
+		<form @submit.prevent="emit('submit')">
+      <!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
+      <ContactSection :form-data="fd" :show-worker-met="filteredData?.debitors?.some(d => d.is_company)" />
 
-      <PaymentSection :form-data="fd" />
+      <PaymentSection :form-data="fd" :show-amount="true" />
 
-      <AssetCarSection :form-data="fd" :show-asset-comments="true" />
+      <AssetCarSection :form-data="fd" />
+
+      <!-- ponytail: Add OtherAssetsSection to allow registering other assets/cars found during visit -->
+      <OtherAssetsSection :form-data="fd" />
 
       <FormActions
         :form-data="fd"
@@ -37,16 +37,17 @@
 import { useVisitForm } from '@/composables/useVisitForm'
 import FormHeader from '@/components/forms/FormHeader.vue'
 import DebitorPanel from '@/components/forms/DebitorPanel.vue'
+import ContactSection from '@/components/forms/ContactSection.vue'
 import PaymentSection from '@/components/forms/PaymentSection.vue'
 import AssetCarSection from '@/components/forms/AssetCarSection.vue'
+import OtherAssetsSection from '@/components/forms/OtherAssetsSection.vue'
 import FormActions from '@/components/forms/FormActions.vue'
-import YesNo from '@/components/forms/YesNo.vue'
 
 const props = defineProps({
-  visitData: { type: Object, required: true },
-  formData: { type: Object, required: true },
-  isSubmitting: { type: Boolean, default: false },
-  docBlob: { type: Object, default: null },
+	visitData: { type: Object, required: true },
+	formData: { type: Object, required: true },
+	isSubmitting: { type: Boolean, default: false },
+	docBlob: { type: Object, default: null },
 })
 const emit = defineEmits(['update:formData', 'submit', 'images', 'remove-image'])
 
@@ -55,7 +56,7 @@ const { fd, filteredData } = useVisitForm(props, emit)
 
 <style scoped>
 .form-wrapper {
-  width: 100%;
-  margin: 0 auto;
+	width: 100%;
+	margin: 0 auto;
 }
 </style>

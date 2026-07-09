@@ -1,19 +1,39 @@
+<!-- src/components/forms/PaymentSection.vue -->
 <template>
-  <YesNo
-    label="Er betaling modtaget?"
-    name="payment_received"
-    v-model="fd.payment_received"
-    :required="required"
-  />
-  <fieldset v-if="showAmount && fd.payment_received">
-    <legend>Hvor meget er betalingen på? (kr.)</legend>
-    <input
-      v-model.number="fd.payment_received_amount"
-      type="number"
-      min="0"
-      required
-    />
-  </fieldset>
+	<div>
+		<YesNo
+			label="Er betaling modtaget?"
+			name="payment_received"
+			v-model="fd.payment.ReceivedPayment"
+			:required="required"
+		/>
+		<Transition name="fade-slide" appear>
+			<div v-if="showAmount && fd.payment.ReceivedPayment" class="mt-3">
+				<fieldset class="mb-3">
+					<legend>Hvor meget er betalingen på? (kr.)</legend>
+					<input
+						v-model.number="fd.payment.PaymentAmount"
+						type="number"
+						min="0"
+						step="0.01"
+						class="form-control"
+						required
+					/>
+				</fieldset>
+
+				<!-- ponytail: PaymentMethod select field added matching new backend struct model.PaymentQuestions -->
+				<fieldset class="mb-3">
+					<legend>Betalingsmetode</legend>
+					<select v-model="fd.payment.PaymentMethod" class="form-select" required>
+						<option value="" disabled hidden>Vælg betalingsmetode</option>
+						<option value="Kontant">Kontant</option>
+						<option value="Bankoverførsel">Bankoverførsel</option>
+						<option value="Andet">Andet</option>
+					</select>
+				</fieldset>
+			</div>
+		</Transition>
+	</div>
 </template>
 
 <script setup>
@@ -21,13 +41,47 @@ import { computed } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 
 const props = defineProps({
-  formData: { type: Object, required: true },
-  required: { type: Boolean, default: false },
-  showAmount: { type: Boolean, default: false },
+	formData: { type: Object, required: true },
+	required: { type: Boolean, default: false },
+	showAmount: { type: Boolean, default: false },
 })
 
 const fd = computed({
-  get: () => props.formData,
-  set: () => {},
+	get: () => props.formData,
+	set: () => {},
 })
 </script>
+
+<style scoped>
+.form-control,
+.form-select {
+	padding: 8px 12px;
+	border: 2px solid #d1d5db;
+	border-radius: 8px;
+	font-size: 15px;
+	background: #fff;
+	width: 100%;
+}
+.form-control:focus,
+.form-select:focus {
+	outline: none;
+	border-color: rgb(99, 170, 219);
+}
+.mt-3 {
+	margin-top: 1rem;
+}
+.mb-3 {
+	margin-bottom: 1rem;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+	opacity: 0;
+	transform: translateY(-6px);
+}
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+	transition:
+		opacity 0.18s ease,
+		transform 0.18s ease;
+}
+</style>

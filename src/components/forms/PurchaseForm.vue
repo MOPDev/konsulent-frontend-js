@@ -1,8 +1,9 @@
+<!-- src/components/forms/PurchaseForm.vue -->
 <template>
   <div class="form-wrapper">
     <FormHeader
-      title="Købe kontrakt"
-      description="Fordi det er en købekontrakt så ejer skyldner bilen men de har ikke betalt de penge som de skylder i den. prøv at få dem til at underskrive kontrakten."
+      title="Købekontrakt"
+      description="Fordi det er en købekontrakt, ejer skyldner bilen, men har ikke betalt restancen. Prøv at få dem til at underskrive salgsfuldmagten."
       :debt="filteredData?.debt"
     />
     <DebitorPanel
@@ -10,31 +11,24 @@
       :doc-blob="docBlob"
     />
     <form @submit.prevent="emit('submit')">
-      <YesNo
-        label="Er debitor hjemme?"
-        name="debitor_is_home"
-        v-model="fd.debitor_is_home"
-        :required="true"
-      />
+      <!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
+      <ContactSection :form-data="fd" :show-worker-met="filteredData?.debitors?.some(d => d.is_company)" />
 
       <PaymentSection :form-data="fd" :show-amount="true" />
 
       <AssetCarSection :form-data="fd" />
 
-      <YesNo
-        v-if="fd.debitor_is_home"
-        label="Er salgsfuldmagt underskrevet?"
-        name="sf_signed"
-        v-model="fd.sf_signed"
-        :required="true"
-      />
+      <!-- ponytail: Add OtherAssetsSection to allow registering other assets/cars found during visit -->
+      <OtherAssetsSection :form-data="fd" />
 
+      <!-- ponytail: sf_signed is mapped to fd.assets.sf_signed, and se_signed is removed as it's no longer in models.AssetQuestions -->
       <YesNo
-        v-if="fd.debitor_is_home"
-        label="Er salgs-/eftergivelseaftale underskrevet?"
-        name="se_signed"
-        v-model="fd.se_signed"
+        v-if="fd.contact.debitor_met"
+        label="Er salgsfuldmagt (SF) underskrevet?"
+        name="sf_signed"
+        v-model="fd.assets.sf_signed"
         :required="true"
+        class="mt-3"
       />
 
       <FormActions
@@ -53,8 +47,10 @@
 import { useVisitForm } from '@/composables/useVisitForm'
 import FormHeader from '@/components/forms/FormHeader.vue'
 import DebitorPanel from '@/components/forms/DebitorPanel.vue'
+import ContactSection from '@/components/forms/ContactSection.vue'
 import PaymentSection from '@/components/forms/PaymentSection.vue'
 import AssetCarSection from '@/components/forms/AssetCarSection.vue'
+import OtherAssetsSection from '@/components/forms/OtherAssetsSection.vue'
 import FormActions from '@/components/forms/FormActions.vue'
 import YesNo from '@/components/forms/YesNo.vue'
 
@@ -73,5 +69,8 @@ const { fd, filteredData } = useVisitForm(props, emit)
 .form-wrapper {
   width: 100%;
   margin: 0 auto;
+}
+.mt-3 {
+  margin-top: 1rem;
 }
 </style>

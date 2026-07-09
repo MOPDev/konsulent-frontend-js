@@ -17,8 +17,6 @@
 		"
 	/>
 
-	<BesogsbrevButton :visit-id="visitId" />
-
 	<div class="field">
 		<label class="field__label" for="comments">Kommentarer</label>
 		<textarea
@@ -38,7 +36,6 @@
 <script setup>
 import { computed } from 'vue'
 import FileUpload from '@/components/forms/FileUpload.vue'
-import BesogsbrevButton from '@/components/forms/BesogsbrevButton.vue'
 
 const props = defineProps({
 	formData: { type: Object, required: true },
