@@ -88,7 +88,7 @@
 			<YesNo
 				label="Er brevet leveret?"
 				name="LetterDelivered"
-				v-model="fd.contact.LetterDelivered"
+				v-model="fd.contact.letter_delivered"
 				:required="true"
 			/>
 		</div>

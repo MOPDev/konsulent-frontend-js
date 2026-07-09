@@ -80,7 +80,7 @@ const formData = reactive({
 	pos_accuracy: null,
 	contact: {
 		mailbox_name: '',
-		LetterDelivered: null,
+		letter_delivered: null,
 		debitor_met: null,
 		other_met: null,
 		other_title: '',
