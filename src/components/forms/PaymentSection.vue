@@ -42,7 +42,7 @@ import YesNo from '@/components/forms/YesNo.vue'
 const props = defineProps({
 	formData: { type: Object, required: true },
 	required: { type: Boolean, default: false },
-	showAmount: { type: Boolean, default: false },
+	showAmount: { type: Boolean, default: true },
 })
 
 const fd = computed({

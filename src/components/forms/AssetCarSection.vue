@@ -55,6 +55,22 @@
 
 				<fieldset class="mb-3">
 					<legend>Uddybende bemærkning til renlighed</legend>
+					<div class="quick-fills mb-2">
+						<button
+							v-for="t in ['røglugt', 'mug', 'beskidte sæder']"
+							:key="t"
+							type="button"
+							class="btn-badge me-1"
+							@click="
+								fd.assets.asset_cleanliness_note = fd.assets.asset_cleanliness_note
+									? fd.assets.asset_cleanliness_note + ', ' + t
+									: t
+							"
+						>
+							{{ t }}
+						</button>
+					</div>
+
 					<input
 						v-model.trim="fd.assets.asset_cleanliness_note"
 						type="text"
@@ -229,6 +245,20 @@ const formattedOdometer = computed({
 .form-select:focus {
 	outline: none;
 	border-color: rgb(99, 170, 219);
+}
+.btn-badge {
+	background: #f3f4f6;
+	border: 1px solid #d1d5db;
+	color: #374151;
+	padding: 4px 8px;
+	font-size: 12px;
+	font-weight: 500;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.btn-badge:hover {
+	background: #e5e7eb;
 }
 .mt-3 {
 	margin-top: 1rem;

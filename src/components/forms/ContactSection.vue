@@ -42,9 +42,20 @@
 
 				<Transition name="fade-slide" appear>
 					<div v-if="fd.contact.other_met" class="field mt-2 mb-3">
-						<label class="field__label"
-							>Hvem blev mødt? (F.eks. ægtefælle, partner, kæreste, barn, nabo)</label
-						>
+						<label class="field__label">Hvem blev mødt?</label>
+						<!-- ponytail: quick fill common relations, avoids typing the same values repeatedly -->
+						<div class="quick-fills mb-2">
+							<button
+								v-for="t in ['Ægtefælle', 'Partner', 'Samboende', 'Barn', 'Nabo']"
+								:key="t"
+								type="button"
+								class="btn-badge me-1"
+								@click="fd.contact.other_title = t"
+							>
+								{{ t }}
+							</button>
+						</div>
+
 						<input
 							v-model.trim="fd.contact.other_title"
 							type="text"
@@ -73,6 +84,18 @@
 						>Hvilken medarbejder blev mødt? (F.eks. direktør, receptionist,
 						håndværker)</label
 					>
+					<div class="quick-fills mb-2">
+						<button
+							v-for="t in ['direktør', 'receptionist', 'håndværker']"
+							:key="t"
+							type="button"
+							class="btn-badge me-1"
+							@click="fd.contact.worker_title = t"
+						>
+							{{ t }}
+						</button>
+					</div>
+
 					<input
 						v-model.trim="fd.contact.worker_title"
 						type="text"

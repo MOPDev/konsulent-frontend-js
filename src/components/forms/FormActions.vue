@@ -1,3 +1,4 @@
+<!-- FormActions.vue -->
 <template>
 	<FileUpload
 		:id="fileUploadId"

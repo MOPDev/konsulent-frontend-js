@@ -304,6 +304,18 @@ async function submitForm(visitId) {
 			}
 		}
 
+		if (data.other_assets?.length) {
+			for (const asset of data.other_assets) {
+				const match = formData.other_assets.find((a) => a.regnr === asset.regnr)
+				if (!match?.image?.file) continue
+				const fd = new FormData()
+				fd.append('image', match.image.file)
+				await api.post(`/asset/${asset.ID}/image`, fd, {
+					headers: { 'Content-Type': undefined },
+				})
+			}
+		}
+
 		// only leave the form on success
 		sendBack()
 	} catch (err) {
