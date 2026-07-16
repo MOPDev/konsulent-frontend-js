@@ -44,10 +44,10 @@ export const useAuthStore = defineStore('auth', {
 	actions: {
 		async login(credentials) {
 			const { data } = await api.post('/login', credentials)
-			console.log('Login API response:', JSON.stringify(data))
+			//console.log('Login API response:', JSON.stringify(data))
 			this.user = normalizeUserResponse(data)
-			console.log('normalized user:', JSON.stringify(this.user))
-			console.log('userRights after login:', this.user?.rights ?? this.user?.role)
+			//console.log('normalized user:', JSON.stringify(this.user))
+			//console.log('userRights after login:', this.user?.rights ?? this.user?.role)
 			this.initializing = false
 		},
 		async logout() {

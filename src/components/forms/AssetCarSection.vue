@@ -33,7 +33,7 @@
 					class="mb-3"
 					v-if="fd.assets.asset_status && fd.assets.asset_status !== 'Perfect'"
 				>
-					<legend>Uddybende bemærkning til stand/skader</legend>
+					<legend>Evt. Uddybende bemærkning til stand/skader</legend>
 					<input
 						v-model.trim="fd.assets.asset_status_note"
 						type="text"
@@ -54,7 +54,7 @@
 				</fieldset>
 
 				<fieldset class="mb-3">
-					<legend>Uddybende bemærkning til renlighed</legend>
+					<legend>Evt. Uddybende bemærkning til renlighed</legend>
 					<div class="quick-fills mb-2">
 						<button
 							v-for="t in ['røglugt', 'mug', 'beskidte sæder']"
@@ -85,6 +85,7 @@
 		<YesNo
 			v-if="fd.contact.debitor_met || fd.contact.other_met"
 			label="Bekræftet ejerforhold?"
+			hint="Er det bekræftet, at bilen tilhører skyldneren?"
 			name="asset_confirmed_owner"
 			v-model="fd.assets.asset_confirmed_owner"
 			class="mt-3"

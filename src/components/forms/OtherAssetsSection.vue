@@ -14,7 +14,7 @@
 						v-model="asset.regnr"
 						type="text"
 						class="form-control"
-						placeholder="Registreringsnummer (f.eks. AB 12 345)"
+						placeholder="Registreringsnummer (f.eks. AB12345)"
 						required
 					/>
 				</div>
@@ -26,8 +26,8 @@
 			</div>
 			<FileUpload
 				:id="`other-asset-photo-${index}`"
-				title="Billede af aktiv"
-				hint="Tryk for at tilføje ét billede"
+				title="Billede af andre relevante aktiver"
+				hint="Man kan kun tilføje et billede"
 				:multiple="false"
 				:append-mode="false"
 				:files="asset.image ? [asset.image] : []"

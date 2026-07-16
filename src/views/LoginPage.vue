@@ -35,7 +35,7 @@ async function handleLogin() {
 		errorMessage.value = 'Cannot connect to backend. Please try again later.'
 		return
 	}
-	console.log('Login attempt')
+	//console.log('Login attempt')
 	errorMessage.value = ''
 	try {
 		await authStore.login({
