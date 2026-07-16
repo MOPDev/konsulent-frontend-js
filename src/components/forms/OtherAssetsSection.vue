@@ -1,7 +1,7 @@
 <!-- src/components/forms/OtherAssetsSection.vue -->
 <template>
 	<div class="other-assets-section" style="margin: 30px 0">
-		<legend>Andre køretøjer / aktiver</legend>
+		<legend>Andre relevante køretøjer / aktiver</legend>
 		<p class="text-muted">
 			Tilføj registreringsnummer på andre biler eller aktiver, der blev observeret under
 			besøget.
