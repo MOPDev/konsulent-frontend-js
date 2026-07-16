@@ -157,7 +157,9 @@
 					<select v-model="fd.assets.transport_provider" class="form-select" required>
 						<option value="" disabled hidden>Vælg transportør</option>
 						<option value="Grube (Sjælland)">Grube (Sjælland)</option>
-						<option value="Jens (Jylland)">Jens (Jylland)</option>
+						<option value="John Baja Transport (Jylland)">
+							John Baja Transport (Jylland)
+						</option>
 						<option value="Konsulent">Konsulent (Auditor)</option>
 						<option value="Ingen">Ingen (None)</option>
 						<option value="Anden transportør">Anden transportør (Other)</option>
