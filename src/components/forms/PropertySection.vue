@@ -63,12 +63,12 @@ const fd = computed({
 
 // ponytail: tag <-> bool field mapping lives here since it's only used by this section's quick-fills
 const quickFills = [
-	{ tag: 'overbegroet have', field: 'OvergrownGarden' },
-	{ tag: 'fyldt postkasse', field: 'MailboxFull' },
-	{ tag: 'knuste ruder', field: 'BrokenWindows' },
-	{ tag: 'efterladte køretøjer', field: 'AbandonedVehicles' },
-	{ tag: 'overfyldt affald', field: 'TrashOverflown' },
-	{ tag: 'til salg-skilt', field: 'ForsaleSign' },
+	{ tag: 'overbegroet have', field: 'overgrown_garden' },
+	{ tag: 'fyldt postkasse', field: 'mailbox_full' },
+	{ tag: 'knuste ruder', field: 'broken_windows' },
+	{ tag: 'efterladte køretøjer', field: 'abandoned_vehicles' },
+	{ tag: 'overfyldt affald', field: 'trash_overflown' },
+	{ tag: 'til salg-skilt', field: 'forsale_sign' },
 ]
 
 function splitNote(note) {
