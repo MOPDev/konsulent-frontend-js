@@ -283,6 +283,7 @@
 
 <script setup>
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/errorApi'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
 
@@ -375,6 +376,7 @@ async function getPlannedVisits() {
 	} catch (err) {
 		console.error('Error fetching planned visits:', err)
 		error.value = 'Fejl ved hentning af planlagte besøg'
+		errorApi.logError(err)
 	}
 }
 
@@ -384,6 +386,7 @@ async function getUsers() {
 		users.value = res.data.users || []
 	} catch (err) {
 		console.error('Error fetching users:', err)
+		errorApi.logError(err)
 	}
 }
 
@@ -418,6 +421,7 @@ async function downloadGroupExcel(groupId) {
 	} catch (err) {
 		console.error('Error downloading Excel:', err)
 		error.value = 'Fejl ved download af Excel'
+		errorApi.logError(err)
 	}
 }
 
@@ -446,6 +450,7 @@ async function submitDateChange() {
 		await getPlannedVisits()
 	} catch (err) {
 		error.value = err.response?.data?.error || 'Fejl ved ændring af dato'
+		errorApi.logError(err)
 	}
 }
 
@@ -472,6 +477,7 @@ async function submitKonsulentChange() {
 		await getPlannedVisits()
 	} catch (err) {
 		error.value = err.response?.data?.error || 'Fejl ved ændring af konsulent'
+		errorApi.logError(err)
 	}
 }
 
@@ -496,6 +502,7 @@ async function submitRemoveFromGroup() {
 		await getPlannedVisits()
 	} catch (err) {
 		error.value = err.response?.data?.error || 'Fejl ved fjernelse fra gruppe'
+		errorApi.logError(err)
 	}
 }
 
@@ -522,6 +529,7 @@ async function submitAddToGroup() {
 		await getPlannedVisits()
 	} catch (err) {
 		error.value = err.response?.data?.error || 'Fejl ved tilføjelse til gruppe'
+		errorApi.logError(err)
 	}
 }
 
@@ -553,6 +561,7 @@ async function handleSendLetter() {
 	} catch (err) {
 		console.error('Error sending letters:', err)
 		error.value = 'Fejl ved afsendelse af breve'
+		errorApi.logError(err)
 	}
 }
 
@@ -582,6 +591,7 @@ async function handleDeleteVisits() {
 	} catch (err) {
 		console.error('Error deleting visits:', err)
 		error.value = 'Fejl ved sletning af besøg'
+		errorApi.logError(err)
 	}
 }
 

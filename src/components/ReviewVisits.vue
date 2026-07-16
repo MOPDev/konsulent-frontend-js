@@ -231,6 +231,7 @@ const getPdf = async (id) => {
 	} catch (err) {
 		console.error('Error fetching PDF:', err)
 		error.value = 'Fejl ved hentning af PDF'
+		errorApi.logError(err)
 	}
 }
 </script>

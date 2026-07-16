@@ -233,6 +233,7 @@ async function deleteUser(userId) {
 		users.value = prev
 		message.value = 'Fejl ved sletning: ' + (err.response?.data?.error || err.message)
 		messageError.value = true
+		errorApi.logError(err)
 	}
 }
 </script>

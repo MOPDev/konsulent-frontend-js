@@ -9,6 +9,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/errorApi'
 
 const props = defineProps({
 	visitIds: { type: Array, required: true },
@@ -50,6 +51,7 @@ async function printAll() {
 	} catch (err) {
 		error.value = 'Fejl ved hentning af dokumenter'
 		console.error(err)
+		errorApi.logError(err)
 	} finally {
 		clearInterval(timer)
 		loading.value = false

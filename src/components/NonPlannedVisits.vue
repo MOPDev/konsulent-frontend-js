@@ -145,6 +145,7 @@ const fetchCreatedVisits = async () => {
 		console.error(err)
 		error.value = 'Failed to fetch available visits'
 		plannedVisits.value = []
+		errorApi.logError(err)
 	}
 }
 
@@ -205,6 +206,7 @@ const fetchUsers = async () => {
 		const response = await api.get('/users') // Adjust endpoint
 		users.value = response.data.users
 	} catch (err) {
+		errorApi.logError(err)
 		console.error('Failed to fetch users:', err)
 	}
 }

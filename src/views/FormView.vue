@@ -251,6 +251,7 @@ const loadDocument = async (ID) => {
 		})
 		docBlob.value = response.data // Store the blob
 	} catch (err) {
+		errorApi.logError(err)
 		console.error('Document loading failed', err)
 		errorApi.log('Document loading failed: ' + err.message)
 	}

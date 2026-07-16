@@ -69,6 +69,7 @@
 
 <script setup>
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/errorApi'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
 
@@ -150,6 +151,7 @@ async function getNotVisitedVisits() {
 	} catch (err) {
 		error.value = 'Fejl ved hentning af besøg: ' + err.message
 		console.error('Error fetching not visited visits:', err)
+		errorApi.logError(err)
 	}
 }
 
@@ -194,6 +196,7 @@ async function downloadGroupExcel(groupId) {
 	} catch (err) {
 		console.error('Error downloading Excel:', err)
 		error.value = 'Fejl ved download af Excel'
+		errorApi.logError(err)
 	}
 }
 
@@ -223,6 +226,7 @@ async function handleDeleteVisits() {
 	} catch (err) {
 		console.error('Error deleting visits:', err)
 		error.value = 'Fejl ved sletning af besøg'
+		errorApi.logError(err)
 	}
 }
 </script>

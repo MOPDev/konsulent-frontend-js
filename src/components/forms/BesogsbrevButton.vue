@@ -12,6 +12,7 @@
 <script setup>
 import { ref } from 'vue'
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/errorApi'
 
 const props = defineProps({
 	visitId: { required: true },
@@ -54,6 +55,7 @@ async function fetchAndPrint() {
 			}
 		}
 	} catch (err) {
+		errorApi.logError(err)
 		if (err.response?.data instanceof Blob) {
 			const text = await err.response.data.text()
 			try {

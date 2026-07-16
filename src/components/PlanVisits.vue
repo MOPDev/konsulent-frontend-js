@@ -87,6 +87,7 @@ onMounted(async () => {
 		users.value = response.data.users
 	} catch (err) {
 		console.error('Failed to fetch users:', err)
+		errorApi.logError(err)
 		// Handle error appropriately - maybe redirect to login if 401
 		if (err.response?.status === 401) {
 			authStore.logout()

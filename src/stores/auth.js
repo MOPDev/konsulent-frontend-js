@@ -1,6 +1,7 @@
 // src/stores/auth.js (Pinia example)
 import { defineStore } from 'pinia'
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/errorApi'
 
 export const USER_RIGHTS = {
 	ADMIN: 'admin',
@@ -59,6 +60,7 @@ export const useAuthStore = defineStore('auth', {
 				const { data } = await api.get('/user')
 				this.user = normalizeUserResponse(data)
 			} catch (err) {
+				errorApi.logError(err)
 				console.error('Error fetching user:', err)
 				this.user = null
 			} finally {
