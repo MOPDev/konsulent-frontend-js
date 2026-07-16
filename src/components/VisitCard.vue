@@ -52,10 +52,11 @@ const isToday = computed(() => {
 })
 
 const canVisit = computed(
-	() => !props.visit.visit_response && props.visit.status_id == 3 && isToday.value,
+	() => (props.visit.status_id == 3 || props.visit.status_id == 6) && isToday.value,
 )
 
 const buttonLabel = computed(() => {
+	if (props.visit.status_id === 6) return 'Prøv at besvare igen'
 	if (canVisit.value) return 'Besøg'
 	if (props.visit.status_id === 2) return 'send brev'
 	if (props.visit.visit_response || props.visit.status_id > 3) return 'Besøgt'
