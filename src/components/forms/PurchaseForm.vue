@@ -30,7 +30,7 @@
 				v-if="fd.contact.debitor_met"
 				label="Er salgsfuldmagt (SF) underskrevet?"
 				name="sf_signed"
-				v-model="fd.assets.sf_signed"
+				v-model="fd.asset.sf_signed"
 				:required="true"
 				class="mt-3"
 			/>

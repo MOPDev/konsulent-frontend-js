@@ -94,7 +94,7 @@ const formData = reactive({
 		PaymentAmount: null,
 		PaymentMethod: '',
 	},
-	assets: {
+	asset: {
 		asset_seen: null,
 		asset_accessible: null,
 		asset_status: '',
@@ -143,15 +143,15 @@ const formData = reactive({
 
 // ponytail: updated watches to react to new nested formData layout
 watch(
-	() => formData.assets.asset_seen,
+	() => formData.asset.asset_seen,
 	(newVal) => {
 		if (newVal === false || newVal === null) {
-			formData.assets.odometer_km = null
-			formData.assets.asset_accessible = null
-			formData.assets.asset_status = ''
-			formData.assets.asset_status_note = ''
-			formData.assets.asset_cleanliness = ''
-			formData.assets.asset_cleanliness_note = ''
+			formData.asset.odometer_km = null
+			formData.asset.asset_accessible = null
+			formData.asset.asset_status = ''
+			formData.asset.asset_status_note = ''
+			formData.asset.asset_cleanliness = ''
+			formData.asset.asset_cleanliness_note = ''
 		}
 	},
 )
@@ -167,7 +167,7 @@ watch(
 			formData.monetary.position = ''
 			formData.monetary.net_salary_min = null
 			formData.monetary.net_salary_max = null
-			formData.assets.sf_signed = null
+			formData.asset.sf_signed = null
 		}
 	},
 )
@@ -194,12 +194,12 @@ watch(
 )
 
 watch(
-	() => formData.assets.is_seized,
+	() => formData.asset.is_seized,
 	(newVal) => {
 		if (newVal === false || newVal === null) {
-			formData.assets.handover_strategy = ''
-			formData.assets.handover_strategy_note = ''
-			formData.assets.transport_provider = ''
+			formData.asset.handover_strategy = ''
+			formData.asset.handover_strategy_note = ''
+			formData.asset.transport_provider = ''
 		}
 	},
 )
@@ -257,7 +257,7 @@ const loadDocument = async (ID) => {
 }
 
 async function submitForm(visitId) {
-	if (formData.assets.asset_seen && formData.images.length === 0) {
+	if (formData.asset.asset_seen && formData.images.length === 0) {
 		alert('Du skal tilføje mindst ét billede når køretøjet er til stede.')
 		return
 	}
@@ -267,11 +267,11 @@ async function submitForm(visitId) {
 		const duration = now - startTime.value
 
 		if (visitData.value?.type?.ID === 1) {
-			formData.assets.contract_type = 'Købekontrakt'
+			formData.asset.contract_type = 'Købekontrakt'
 		} else if (visitData.value?.type?.ID === 2) {
-			formData.assets.contract_type = 'Leasing'
+			formData.asset.contract_type = 'Leasing'
 		} else if (visitData.value?.type?.ID === 3) {
-			formData.assets.contract_type = 'Blanco'
+			formData.asset.contract_type = 'Blanco'
 		}
 
 		const payload = {
@@ -284,7 +284,7 @@ async function submitForm(visitId) {
 			pos_accuracy: formData.pos_accuracy,
 			contact: formData.contact,
 			payment: formData.payment,
-			assets: formData.assets,
+			assets: formData.asset,
 			property: formData.property,
 			monetary: formData.monetary,
 			other_assets: formData.other_assets,

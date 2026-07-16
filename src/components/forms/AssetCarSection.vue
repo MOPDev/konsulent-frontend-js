@@ -4,23 +4,23 @@
 		<YesNo
 			label="Er bilen til stede på adressen?"
 			name="asset_seen"
-			v-model="fd.assets.asset_seen"
+			v-model="fd.asset.asset_seen"
 			:required="true"
 		/>
 
 		<Transition name="fade-slide" appear>
-			<div v-if="fd.assets.asset_seen" class="mt-3">
+			<div v-if="fd.asset.asset_seen" class="mt-3">
 				<YesNo
 					label="Kan man komme til bilen?"
 					name="asset_accessible"
-					v-model="fd.assets.asset_accessible"
+					v-model="fd.asset.asset_accessible"
 					:required="true"
 				/>
 
 				<!-- ponytail: Asset status select dropdown mapping to models.AssetQuestions.AssetStatus string -->
 				<fieldset class="mb-3">
 					<legend>Bilens stand</legend>
-					<select v-model="fd.assets.asset_status" class="form-select" required>
+					<select v-model="fd.asset.asset_status" class="form-select" required>
 						<option value="" disabled hidden>Vælg stand</option>
 						<option value="Perfekt">Perfekt</option>
 						<option value="Mindre ridser">Mindre ridser</option>
@@ -31,11 +31,11 @@
 
 				<fieldset
 					class="mb-3"
-					v-if="fd.assets.asset_status && fd.assets.asset_status !== 'Perfect'"
+					v-if="fd.asset.asset_status && fd.asset.asset_status !== 'Perfect'"
 				>
 					<legend>Evt. Uddybende bemærkning til stand/skader</legend>
 					<input
-						v-model.trim="fd.assets.asset_status_note"
+						v-model.trim="fd.asset.asset_status_note"
 						type="text"
 						class="form-control"
 						placeholder="Beskriv skaderne"
@@ -45,7 +45,7 @@
 				<!-- ponytail: Asset cleanliness select dropdown mapping to models.AssetQuestions.AssetCleanliness string -->
 				<fieldset class="mb-3">
 					<legend>Bilens renlighed</legend>
-					<select v-model="fd.assets.asset_cleanliness" class="form-select" required>
+					<select v-model="fd.asset.asset_cleanliness" class="form-select" required>
 						<option value="" disabled hidden>Vælg renlighed</option>
 						<option value="lige ud af vaskehal">Lige ud af vaskehal</option>
 						<option value="generelt ren">Generelt ren</option>
@@ -62,8 +62,8 @@
 							type="button"
 							class="btn-badge me-1"
 							@click="
-								fd.assets.asset_cleanliness_note = fd.assets.asset_cleanliness_note
-									? fd.assets.asset_cleanliness_note + ', ' + t
+								fd.asset.asset_cleanliness_note = fd.asset.asset_cleanliness_note
+									? fd.asset.asset_cleanliness_note + ', ' + t
 									: t
 							"
 						>
@@ -72,7 +72,7 @@
 					</div>
 
 					<input
-						v-model.trim="fd.assets.asset_cleanliness_note"
+						v-model.trim="fd.asset.asset_cleanliness_note"
 						type="text"
 						class="form-control"
 						placeholder="F.eks. Røglugt, beskidte sæder"
@@ -87,14 +87,14 @@
 			label="Bekræftet ejerforhold?"
 			hint="Er det bekræftet, at bilen tilhører skyldneren?"
 			name="asset_confirmed_owner"
-			v-model="fd.assets.asset_confirmed_owner"
+			v-model="fd.asset.asset_confirmed_owner"
 			class="mt-3"
 		/>
 
 		<YesNo
 			label="Er nøgler givet til konsulenten?"
 			name="asset_keys_delivered"
-			v-model="fd.assets.asset_keys_delivered"
+			v-model="fd.asset.asset_keys_delivered"
 			:required="true"
 			class="mt-3"
 		/>
@@ -102,13 +102,13 @@
 		<YesNo
 			label="Er bilen taget med / inddrevet?"
 			name="is_seized"
-			v-model="fd.assets.is_seized"
+			v-model="fd.asset.is_seized"
 			:required="true"
 			class="mt-3"
 		/>
 
 		<Transition name="fade-slide" appear>
-			<div v-if="fd.assets.is_seized" class="mt-3">
+			<div v-if="fd.asset.is_seized" class="mt-3">
 				<fieldset class="mb-3 mt-3">
 					<legend>Aktuel km-stand</legend>
 					<input
@@ -122,7 +122,7 @@
 				<!-- ponytail: HandoverStrategy select dropdown mapping to models.AssetQuestions.HandoverStrategy -->
 				<fieldset class="mb-3">
 					<legend>Afhentnings-/afleveringsstrategi</legend>
-					<select v-model="fd.assets.handover_strategy" class="form-select" required>
+					<select v-model="fd.asset.handover_strategy" class="form-select" required>
 						<option value="" disabled hidden>Vælg strategi</option>
 						<option value="Konsulent kører bilen væk">
 							Konsulent kører bilen væk
@@ -140,10 +140,10 @@
 					</select>
 				</fieldset>
 
-				<fieldset class="mb-3" v-if="fd.assets.handover_strategy === 'Other'">
+				<fieldset class="mb-3" v-if="fd.asset.handover_strategy === 'Other'">
 					<legend>Uddyb strategien</legend>
 					<input
-						v-model.trim="fd.assets.handover_strategy_note"
+						v-model.trim="fd.asset.handover_strategy_note"
 						type="text"
 						class="form-control"
 						placeholder="Beskriv aftalen"
@@ -154,7 +154,7 @@
 				<!-- ponytail: TransportProvider select dropdown mapping to models.AssetQuestions.TransportProvider -->
 				<fieldset class="mb-3">
 					<legend>Transportør/udbyder</legend>
-					<select v-model="fd.assets.transport_provider" class="form-select" required>
+					<select v-model="fd.asset.transport_provider" class="form-select" required>
 						<option value="" disabled hidden>Vælg transportør</option>
 						<option value="Grube (Sjælland)">Grube (Sjælland)</option>
 						<option value="John Baja Transport (Jylland)">
@@ -169,7 +169,7 @@
 				<!-- ponytail: Final vehicle location select dropdown mapping to models.AssetQuestions.FinalVehicleLocation -->
 				<fieldset class="mb-3 mt-3">
 					<legend>Endelig placering af bil</legend>
-					<select v-model="fd.assets.final_vehicle_location" class="form-select" required>
+					<select v-model="fd.asset.final_vehicle_location" class="form-select" required>
 						<option value="" disabled hidden>Vælg placering</option>
 						<option value="Opbevaringsplads Sjælland">
 							Opbevaringsplads Sjælland
@@ -197,7 +197,7 @@
 				<fieldset class="mb-3">
 					<legend>Uddyb placering (f.eks. GPS, båsnummer, nøgleboks)</legend>
 					<textarea
-						v-model.trim="fd.assets.final_vehicle_location_note"
+						v-model.trim="fd.asset.final_vehicle_location_note"
 						rows="3"
 						class="form-control"
 						placeholder="F.eks. Parkeres i bås 42, nøgler i postkasse..."
@@ -223,13 +223,13 @@ const fd = computed({
 
 const formattedOdometer = computed({
 	get() {
-		const val = fd.value.assets.odometer_km
+		const val = fd.value.asset.odometer_km
 		if (val === null || val === undefined || val === '') return ''
 		return new Intl.NumberFormat('da-DK').format(val)
 	},
 	set(str) {
 		const num = parseInt(str.replace(/\./g, ''), 10)
-		fd.value.assets.odometer_km = isNaN(num) ? null : num
+		fd.value.asset.odometer_km = isNaN(num) ? null : num
 	},
 })
 </script>
