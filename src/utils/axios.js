@@ -51,7 +51,13 @@ export const errorApi = {
 	 * @returns {Promise} Promise that resolves with the API response
 	 */
 	logError: (error) => {
-		return errorApi.log(error.message)
+		const data = error.response?.data
+		const backendMessage =
+			typeof data === 'string'
+				? data
+				: (data?.error ?? data?.message ?? (data ? JSON.stringify(data) : null))
+
+		return errorApi.log(backendMessage ?? error.message ?? String(error))
 	},
 }
 
