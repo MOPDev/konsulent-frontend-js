@@ -64,7 +64,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/axios'
-import { errorApi } from '@/utils/errorApi'
+import { errorApi } from '@/utils/axios'
 import DataTable from './DataTable.vue'
 
 const columns = [

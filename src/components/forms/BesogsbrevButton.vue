@@ -12,7 +12,7 @@
 <script setup>
 import { ref } from 'vue'
 import api from '@/utils/axios'
-import { errorApi } from '@/utils/errorApi'
+import { errorApi } from '@/utils/axios'
 
 const props = defineProps({
 	visitId: { required: true },

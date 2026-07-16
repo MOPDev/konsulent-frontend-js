@@ -9,7 +9,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import api from '@/utils/axios'
-import { errorApi } from '@/utils/errorApi'
+import { errorApi } from '@/utils/axios'
 
 const props = defineProps({
 	visitIds: { type: Array, required: true },

@@ -1,7 +1,7 @@
 // src/stores/auth.js (Pinia example)
 import { defineStore } from 'pinia'
 import api from '@/utils/axios'
-import { errorApi } from '@/utils/errorApi'
+import { errorApi } from '@/utils/axios'
 
 export const USER_RIGHTS = {
 	ADMIN: 'admin',

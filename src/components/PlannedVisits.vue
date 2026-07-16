@@ -283,7 +283,7 @@
 
 <script setup>
 import api from '@/utils/axios'
-import { errorApi } from '@/utils/errorApi'
+import { errorApi } from '@/utils/axios'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
 
