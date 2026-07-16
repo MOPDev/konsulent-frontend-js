@@ -315,8 +315,8 @@ async function submitForm(visitId) {
 				})
 			}
 		}
-
-		// only leave the form on success
+		// everything went well, confirm to the backend that it did, and then we navigate back to the auditor's dashboard
+		await api.post(`/visit-response/${data.ID}/complete`)
 		sendBack()
 	} catch (err) {
 		console.error('Error submitting form:', err)
