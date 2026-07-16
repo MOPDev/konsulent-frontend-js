@@ -25,6 +25,8 @@
 			<!-- ponytail: Add OtherAssetsSection to allow registering other assets/cars found during visit -->
 			<OtherAssetsSection :form-data="fd" />
 
+			<PropertySection :form-data="fd" />
+
 			<FormActions
 				:form-data="fd"
 				:visit-id="visitData.ID"

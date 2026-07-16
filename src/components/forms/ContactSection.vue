@@ -186,7 +186,7 @@ const showletterDelivered = computed(() => {
 			fd.value.contact.worker_met === false
 		)
 	} else {
-		return fd.value.contact.debitor_met === false && fd.value.contact.other_met === false
+		return fd.value.contact.debitor_met === false
 	}
 })
 

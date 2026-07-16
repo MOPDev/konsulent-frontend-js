@@ -34,6 +34,8 @@
 				:debitors="filteredData?.debitors || []"
 			/>
 
+			<PropertySection :form-data="fd" />
+
 			<!-- Billede af postkassen -->
 			<FileUpload
 				id="car-photo"

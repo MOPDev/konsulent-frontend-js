@@ -35,6 +35,8 @@
 				class="mt-3"
 			/>
 
+			<PropertySection :form-data="fd" />
+
 			<FormActions
 				:form-data="fd"
 				:visit-id="visitData.ID"
