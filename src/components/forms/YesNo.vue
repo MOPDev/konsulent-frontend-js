@@ -2,6 +2,10 @@
 <template>
 	<fieldset class="yn">
 		<legend>{{ label }}</legend>
+		<!-- add small hint -->
+		<p class="form-text text-muted" style="margin: 0" v-if="hint">
+			{{ hint }}
+		</p>
 
 		<BFormRadioGroup
 			:id="`${name}-group`"
@@ -26,6 +30,7 @@ const props = defineProps({
 	modelValue: { type: [Boolean, null], default: null }, // allow null until user chooses
 	required: { type: Boolean, default: false },
 	disabled: { type: Boolean, default: false },
+	hint: { type: String, default: '' },
 })
 
 const emit = defineEmits(['update:modelValue'])
