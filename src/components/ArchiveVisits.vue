@@ -64,6 +64,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/errorApi'
 import DataTable from './DataTable.vue'
 
 const columns = [
@@ -139,6 +140,7 @@ async function fetchVisits() {
 	} catch (err) {
 		console.error('Error fetching archived visits:', err)
 		error.value = 'Fejl ved hentning af arkiv: ' + err.message
+		errorApi.logError(err)
 	}
 }
 
@@ -195,6 +197,7 @@ const getPdf = async (id) => {
 	} catch (err) {
 		console.error('Error fetching PDF:', err)
 		error.value = 'Fejl ved hentning af PDF'
+		errorApi.logError(err)
 	}
 }
 </script>
