@@ -122,6 +122,7 @@ const fetchAvailableVisits = async () => {
 		errorApi.log('Error fetching available visits: ' + err.message)
 		error.value = 'Failed to fetch available visits'
 		availableVisits.value = []
+		errorApi.logError(err)
 	}
 }
 
@@ -181,7 +182,7 @@ const createVisits = async () => {
 	} catch (err) {
 		errorApi.log('Error creating visits: ' + err.message)
 		console.error('Failed to create visits:', err)
-		// Consider adding user feedback here
+		errorApi.logError(err)
 	}
 }
 
