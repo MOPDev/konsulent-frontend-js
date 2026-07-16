@@ -50,8 +50,17 @@ export const errorApi = {
 	 * @param {Error} error - The Error object to log
 	 * @returns {Promise} Promise that resolves with the API response
 	 */
-	logError: (error) => {
-		const data = error.response?.data
+	logError: async (error) => {
+		let data = error.response?.data
+
+		if (data instanceof Blob) {
+			try {
+				data = JSON.parse(await data.text())
+			} catch {
+				data = null
+			}
+		}
+
 		const backendMessage =
 			typeof data === 'string'
 				? data
