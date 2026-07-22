@@ -196,7 +196,13 @@ const editedUser = reactive<{
 })
 
 function startEdit() {
-	const u = authStore.user as { username?: string; name?: string; initials?: string; email?: string; phone?: string } | null
+	const u = authStore.user as {
+		username?: string
+		name?: string
+		initials?: string
+		email?: string
+		phone?: string
+	} | null
 	editedUser.username = u?.username ?? ''
 	editedUser.name = u?.name ?? ''
 	editedUser.initials = u?.initials ?? ''

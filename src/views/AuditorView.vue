@@ -24,11 +24,11 @@ import { errorApi } from '@/utils/axios'
 import AuditorInformation from '@/components/AuditorInformation.vue'
 
 interface Auditor {
-  ID: number
-  name: string
-  phone: string
-  email: string
-  [key: string]: unknown
+	ID: number
+	name: string
+	phone: string
+	email: string
+	[key: string]: unknown
 }
 
 const route = useRoute()

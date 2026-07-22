@@ -16,8 +16,8 @@ import api from '@/utils/axios'
 import { useRoute } from 'vue-router'
 
 interface Visit {
-  visit_date: string
-  [key: string]: unknown
+	visit_date: string
+	[key: string]: unknown
 }
 
 const route = useRoute()
@@ -35,14 +35,17 @@ api.get('/visit-response/all')
 
 const visitsByDate = computed<Record<string, Visit[]>>(() => {
 	const visits: Visit[] = auditor.value?.visits || []
-	return visits.reduce((dateMap: Record<string, Visit[]>, visit: Visit) => {
-		const date = visit.visit_date
-		if (!dateMap[date]) {
-			dateMap[date] = []
-		}
-		dateMap[date].push(visit)
-		return dateMap
-	}, {} as Record<string, Visit[]>)
+	return visits.reduce(
+		(dateMap: Record<string, Visit[]>, visit: Visit) => {
+			const date = visit.visit_date
+			if (!dateMap[date]) {
+				dateMap[date] = []
+			}
+			dateMap[date].push(visit)
+			return dateMap
+		},
+		{} as Record<string, Visit[]>,
+	)
 })
 </script>
 
