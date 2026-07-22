@@ -68,7 +68,7 @@
 </template>
 
 <script setup>
-import api from '@/utils/axios'
+import { visitsApi } from '@/api/visits'
 import { errorApi } from '@/utils/axios'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
@@ -138,15 +138,11 @@ onMounted(getNotVisitedVisits)
 
 async function getNotVisitedVisits() {
 	try {
-		const response = await api.get('/visits/byStatus', {
-			params: { status: '3' },
-		})
-
-		visits.value = (response.data.visit || []).map((visit) => ({
+		const result = await visitsApi.getByStatus(3)
+		visits.value = (result || []).map((visit) => ({
 			...visit,
 			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
 		}))
-
 		error.value = null
 	} catch (err) {
 		error.value = 'Fejl ved hentning af besøg: ' + err.message
@@ -182,9 +178,7 @@ function toggleGroup(key) {
 
 async function downloadGroupExcel(groupId) {
 	try {
-		const response = await api.get(`/visits/group/${groupId}/planned`, {
-			responseType: 'blob',
-		})
+		const response = await visitsApi.downloadGroupExcel(groupId)
 		const url = window.URL.createObjectURL(new Blob([response.data]))
 		const link = document.createElement('a')
 		link.href = url
@@ -210,7 +204,7 @@ async function handleDeleteVisits() {
 	error.value = null
 	try {
 		const ops = selectedVisitIds.value.map((id) =>
-			api.delete('/visit/byId', { params: { id } }),
+			visitsApi.delete(id),
 		)
 		const results = await Promise.allSettled(ops)
 

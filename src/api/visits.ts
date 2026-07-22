@@ -8,8 +8,16 @@ import { z } from 'zod'
 
 // --- Response wrappers ---
 
+const PartialUserSchema = z.object({
+  ID: z.number(),
+  name: z.string(),
+  email: z.string(),
+  phone: z.string(),
+})
+
 const VisitWithDebitorsSchema = VisitWithoutUserOrDebitorsSchema.extend({
   debitors: DebitorWithoutVisitsSchema.array(),
+  user: PartialUserSchema.optional(),
 })
 const VisitResponseSchema_full = z.object({ visit: VisitWithDebitorsSchema })
 const VisitsByStatusSchema = z.object({ visit: VisitWithDebitorsSchema.array() })
@@ -21,9 +29,11 @@ const KonsulentGroupSchema = z.object({
 export const visitsApi = {
   // --- CRUD ---
 
-  getCreated: () => {
-    const CreatedResponseSchema = z.object({ data: VisitWithDebitorsSchema.array() })
-    return client.get('/visits/create', CreatedResponseSchema).then((r) => r.data)
+  getCreated: async () => {
+    const raw = await client.get('/visits/create')
+    // Handle both { data: [...] } and raw [...]
+    if (Array.isArray(raw)) return VisitWithDebitorsSchema.array().parse(raw)
+    return VisitWithDebitorsSchema.array().parse((raw as any).data)
   },
 
   getPlanned: () => client.get('/visits/planned', KonsulentGroupSchema.array()),
@@ -46,7 +56,10 @@ export const visitsApi = {
   sendLetter: (id: number) =>
     client.post('/visit/letterSent', undefined, undefined, { params: { id } }),
 
-  markReviewed: (ids: number[]) => client.post('/visit/reviewed', ids),
+  markReviewed: (ids: number[]) => client.post('/visit/reviewed', { reviewed_ids: ids }),
+
+  generateVisitFile: (data: { visitIds: number[]; userId: string; date: string }) =>
+    client.post('/visits/visitfile', data, undefined, { responseType: 'blob' }),
 
   // --- Group operations ---
 

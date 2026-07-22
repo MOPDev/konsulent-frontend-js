@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import api from '@/utils/axios'
+import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 
 import { ref, onMounted } from 'vue'
@@ -142,15 +142,13 @@ onMounted(() => {
 	fetchUsers()
 })
 
-function fetchUsers() {
-	api.get('/users')
-		.then((response) => {
-			users.value = response.data.users
-		})
-		.catch((error) => {
-			console.error('Error fetching users:', error)
-			errorApi.log('Error fetching users: ' + error.message)
-		})
+async function fetchUsers() {
+	try {
+		users.value = await usersApi.getAll()
+	} catch (error) {
+		console.error('Error fetching users:', error)
+		errorApi.log('Error fetching users: ' + error.message)
+	}
 }
 
 function badgeClass(rights) {
@@ -188,29 +186,28 @@ function cancelEdit() {
 	message.value = ''
 }
 
-function editUser(userId) {
-	api.patch(`/users/${userId}`, {
-		username: editData.value.username,
-		name: editData.value.name,
-		initials: editData.value.initials,
-		email: editData.value.email || null,
-		phone: editData.value.phone || null,
-		rights: editData.value.rights,
-	})
-		.then((response) => {
-			const index = users.value.findIndex((u) => u.ID === userId)
-			if (index !== -1) {
-				users.value[index] = { ...users.value[index], ...response.data }
-			}
-			editingUserId.value = null
-			message.value = 'Bruger opdateret!'
-			messageError.value = false
+async function editUser(userId) {
+	try {
+		const updated = await usersApi.update(userId, {
+			username: editData.value.username,
+			name: editData.value.name,
+			initials: editData.value.initials,
+			email: editData.value.email || null,
+			phone: editData.value.phone || null,
+			rights: editData.value.rights,
 		})
-		.catch((error) => {
-			console.error('Error updating user:', error)
-			message.value = 'Fejl ved opdatering: ' + (error.response?.data?.error || error.message)
-			messageError.value = true
-		})
+		const index = users.value.findIndex((u) => u.ID === userId)
+		if (index !== -1) {
+			users.value[index] = { ...users.value[index], ...updated }
+		}
+		editingUserId.value = null
+		message.value = 'Bruger opdateret!'
+		messageError.value = false
+	} catch (error) {
+		console.error('Error updating user:', error)
+		message.value = 'Fejl ved opdatering: ' + (error.response?.data?.error || error.message)
+		messageError.value = true
+	}
 }
 
 async function deleteUser(userId) {
@@ -226,7 +223,7 @@ async function deleteUser(userId) {
 	users.value = users.value.filter((u) => u.ID !== userId)
 
 	try {
-		await api.delete(`/users/${userId}`)
+		await usersApi.delete(userId)
 		message.value = 'Bruger slettet'
 		messageError.value = false
 	} catch (err) {

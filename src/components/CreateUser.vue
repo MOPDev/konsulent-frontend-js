@@ -52,7 +52,9 @@
 
 <script setup>
 import { ref } from 'vue'
+import { usersApi } from '@/api/users'
 import api from '@/utils/axios'
+import { errorApi } from '@/utils/axios'
 import { USER_RIGHTS } from '@/stores/auth'
 
 const username = ref('')
@@ -115,10 +117,10 @@ const createUser = async () => {
 	password.value = generatePassword()
 
 	try {
-		await api.post('/register', {
+		await usersApi.create({
 			username: username.value,
 			password: password.value,
-			fullName: fullName.value,
+			name: fullName.value,
 			rights: rights.value,
 			initials: initials.value,
 		})

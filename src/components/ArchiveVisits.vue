@@ -63,7 +63,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/utils/axios'
+import { visitsApi } from '@/api/visits'
 import { errorApi } from '@/utils/axios'
 import DataTable from './DataTable.vue'
 
@@ -131,8 +131,8 @@ onMounted(fetchVisits)
 
 async function fetchVisits() {
 	try {
-		const response = await api.get('/visits/byStatus', { params: { status: 5 } })
-		visits.value = (response.data.visit || []).map((visit) => ({
+		const result = await visitsApi.getByStatus(5)
+		visits.value = (result || []).map((visit) => ({
 			...visit,
 			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
 		}))
@@ -175,10 +175,7 @@ function requestPdfs() {
 
 const getPdf = async (id) => {
 	try {
-		const response = await api.get('/visit/pdf', {
-			params: { id },
-			responseType: 'blob',
-		})
+		const response = await visitsApi.downloadPdf(id)
 
 		const disposition = response.headers['content-disposition']
 		let filename = 'visit.pdf'

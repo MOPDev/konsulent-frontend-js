@@ -168,9 +168,9 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth.js'
-import api from '@/utils/axios.js'
+import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
-import { useRouter } from 'vue-router' // ✅ add this
+import { useRouter } from 'vue-router'
 
 const loading = ref(false)
 const authStore = useAuthStore()
@@ -232,9 +232,7 @@ async function UpdatePassword() {
 
 	try {
 		const userId = authStore.user?.ID
-		await api.patch(`/users/${userId}/password`, {
-			new_password: newPassword.value,
-		})
+		await usersApi.changePassword(userId, newPassword.value)
 		authStore.logout()
 		window.location.reload()
 	} catch (err) {
@@ -251,7 +249,7 @@ async function UpdatePassword() {
 async function updateDetails() {
 	try {
 		const userId = authStore.user?.ID
-		await api.patch(`/users/${userId}`, {
+		await usersApi.update(userId, {
 			username: editedUser.username,
 			name: editedUser.name,
 			initials: editedUser.initials,

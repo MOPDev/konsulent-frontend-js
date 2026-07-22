@@ -66,7 +66,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/utils/axios'
+import { visitsApi } from '@/api/visits'
 import { errorApi } from '@/utils/axios'
 
 import DataTable from './DataTable.vue'
@@ -137,8 +137,8 @@ onMounted(fetchVisits)
 
 async function fetchVisits() {
 	try {
-		const response = await api.get('/visits/byStatus', { params: { status: 4 } })
-		visits.value = (response.data.visit || []).map((visit) => ({
+		const result = await visitsApi.getByStatus(4)
+		visits.value = (result || []).map((visit) => ({
 			...visit,
 			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
 		}))
@@ -175,32 +175,28 @@ function toggleGroup(key) {
 	expandedGroups.value = new Set(expandedGroups.value)
 }
 
-function moveToStatus5() {
+async function moveToStatus5() {
 	if (!selectedVisitIds.value.length) {
 		error.value = 'Vælg mindst et besøg.'
 		return
 	}
 	error.value = null
 
-	const visitsToMove = [...selectedVisitIds.value]
-
-	api.post('/visit/reviewed', { reviewed_ids: visitsToMove })
-		.then((response) => {
-			const result = response.data
-			const errors = result.filter((item) => item.err !== 'no error')
-			if (errors.length) {
-				error.value = errors.map((item) => `ID ${item.id}: ${item.err}`).join('; ')
-			} else {
-				selectedVisitIds.value = []
-				Object.values(tableRefs.value).forEach((t) => t?.clearSelection())
-				error.value = null
-			}
-			fetchVisits()
-		})
-		.catch((err) => {
-			console.error('Error moving visits to status 5:', err.request?.response)
-			error.value = 'Kunne ikke importere besøg: ' + (err.request?.response || err.message)
-		})
+	try {
+		const result = await visitsApi.markReviewed(selectedVisitIds.value)
+		const errors = result.filter((item) => item.err !== 'no error')
+		if (errors.length) {
+			error.value = errors.map((item) => `ID ${item.id}: ${item.err}`).join('; ')
+		} else {
+			selectedVisitIds.value = []
+			Object.values(tableRefs.value).forEach((t) => t?.clearSelection())
+			error.value = null
+		}
+		fetchVisits()
+	} catch (err) {
+		console.error('Error moving visits to status 5:', err.request?.response)
+		error.value = 'Kunne ikke importere besøg: ' + (err.request?.response || err.message)
+	}
 }
 
 function requestPdfs() {
@@ -209,10 +205,7 @@ function requestPdfs() {
 
 const getPdf = async (id) => {
 	try {
-		const response = await api.get('/visit/pdf', {
-			params: { id },
-			responseType: 'blob',
-		})
+		const response = await visitsApi.downloadPdf(id)
 
 		const disposition = response.headers['content-disposition']
 		let filename = 'visit.pdf'

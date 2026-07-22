@@ -282,7 +282,8 @@
 </template>
 
 <script setup>
-import api from '@/utils/axios'
+import { visitsApi } from '@/api/visits'
+import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
@@ -365,8 +366,8 @@ onMounted(async () => {
 
 async function getPlannedVisits() {
 	try {
-		const res = await api.get('/visits/planned')
-		visits.value = (res.data || []).flatMap((konsulent) =>
+		const konsulentGroups = await visitsApi.getPlanned()
+		visits.value = (konsulentGroups || []).flatMap((konsulent) =>
 			(konsulent.visits || []).map((visit) => ({
 				...visit,
 				konsulentName: konsulent.name,
@@ -382,8 +383,7 @@ async function getPlannedVisits() {
 
 async function getUsers() {
 	try {
-		const res = await api.get('/users')
-		users.value = res.data.users || []
+		users.value = await usersApi.getAll()
 	} catch (err) {
 		console.error('Error fetching users:', err)
 		errorApi.logError(err)
@@ -407,9 +407,7 @@ const handleSelectionChange = (selectedIds) => {
 
 async function downloadGroupExcel(groupId) {
 	try {
-		const response = await api.get(`/visits/group/${groupId}/planned`, {
-			responseType: 'blob',
-		})
+		const response = await visitsApi.downloadGroupExcel(groupId)
 		const url = window.URL.createObjectURL(new Blob([response.data]))
 		const link = document.createElement('a')
 		link.href = url
@@ -443,9 +441,7 @@ async function submitDateChange() {
 	if (!newDate.value || !selectedGroup.value) return
 
 	try {
-		await api.patch(`/visits/group/${selectedGroup.value.key}/date`, {
-			newDate: newDate.value,
-		})
+		await visitsApi.changeGroupDate(selectedGroup.value.key, newDate.value)
 		closeDateModal()
 		await getPlannedVisits()
 	} catch (err) {
@@ -470,9 +466,7 @@ async function submitKonsulentChange() {
 	if (!newUserId.value || !selectedGroup.value) return
 
 	try {
-		await api.patch(`/visits/group/${selectedGroup.value.key}/konsulent`, {
-			newUserId: parseInt(newUserId.value),
-		})
+		await visitsApi.changeGroupKonsulent(selectedGroup.value.key, parseInt(newUserId.value))
 		closeKonsulentModal()
 		await getPlannedVisits()
 	} catch (err) {
@@ -495,9 +489,7 @@ async function submitRemoveFromGroup() {
 	if (!selectedVisit.value) return
 
 	try {
-		await api.patch(`/visits/${selectedVisit.value.ID}/group`, {
-			targetGroupId: null,
-		})
+		await visitsApi.moveVisitToGroup(selectedVisit.value.ID, null)
 		closeRemoveModal()
 		await getPlannedVisits()
 	} catch (err) {
@@ -522,9 +514,7 @@ async function submitAddToGroup() {
 	if (!selectedVisit.value) return
 
 	try {
-		await api.patch(`/visits/${selectedVisit.value.ID}/group`, {
-			targetGroupId: Number(targetGroupId.value),
-		})
+		await visitsApi.moveVisitToGroup(selectedVisit.value.ID, Number(targetGroupId.value))
 		closeAddToGroupModal()
 		await getPlannedVisits()
 	} catch (err) {
@@ -539,7 +529,7 @@ async function handleSendLetter() {
 	error.value = null
 	try {
 		const ops = selectedVisitIds.value.map((id) =>
-			api.post('/visit/letterSent', null, { params: { id } }),
+			visitsApi.sendLetter(id),
 		)
 		const results = await Promise.allSettled(ops)
 
@@ -575,7 +565,7 @@ async function handleDeleteVisits() {
 	error.value = null
 	try {
 		const ops = selectedVisitIds.value.map((id) =>
-			api.delete('/visit/byId', { params: { id } }),
+			visitsApi.delete(id),
 		)
 		const results = await Promise.allSettled(ops)
 

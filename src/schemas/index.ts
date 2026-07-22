@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const DeletedAtSchema = z.object({
 	Time: z.coerce.date(),
 	Valid: z.boolean(),
-})
+}).nullable()
 export type DeletedAt = z.infer<typeof DeletedAtSchema>
 
 export const ModelSchema = z.object({

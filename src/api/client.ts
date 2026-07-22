@@ -32,8 +32,8 @@ export const client = {
     return validate(res.data, schema)
   },
 
-  blob: async (url: string, config?: RequestConfig): Promise<Blob> => {
+  blob: async (url: string, config?: RequestConfig) => {
     const res = await api.get(url, { ...config, responseType: 'blob' })
-    return res.data
+    return res
   },
 }

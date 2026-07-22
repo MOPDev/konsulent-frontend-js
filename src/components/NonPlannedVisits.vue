@@ -53,10 +53,11 @@
 </template>
 
 <script setup>
-import api from '@/utils/axios'
+import { visitsApi } from '@/api/visits'
+import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 import { ref } from 'vue'
-import { useAuthStore } from '@/stores/auth' // Adjust import path
+import { useAuthStore } from '@/stores/auth'
 import DataTable from '@/components/DataTable.vue'
 
 const selectedVisits = ref([])
@@ -94,7 +95,7 @@ async function handleDeleteVisits() {
 		error.value = ''
 
 		const ops = selectedVisits.value.map((v) =>
-			api.delete('/visit/byId', { params: { id: v } }),
+			visitsApi.delete(v),
 		)
 
 		const results = await Promise.allSettled(ops)
@@ -123,20 +124,16 @@ async function handleDeleteVisits() {
 
 const fetchCreatedVisits = async () => {
 	try {
-		const response = await api.get('/visits/create')
-		plannedVisits.value = response.data.data
+		plannedVisits.value = await visitsApi.getCreated()
 
-		// Initialize selectedDebtors using visit IDs
 		selectedDebtors.value = {}
 		plannedVisits.value.forEach((visit) => {
 			selectedDebtors.value[visit.ID] = visit.debitors.map((_, i) => i)
 		})
 
 		plannedVisits.value = plannedVisits.value.map((visit) => ({
-			// transform the type.text to actually be filterable/sortable
 			...visit,
 			'type.text': visit.type.text,
-			// also with the klientnavn
 			klientnavn: String(visit.advopro_klient ?? ''),
 		}))
 
@@ -166,11 +163,7 @@ const handlePlanVisits = async () => {
 			date: selectedDate.value,
 		}
 		console.log(planData)
-		const response = await api.post('/visits/visitfile', planData, { responseType: 'blob' })
-
-		const blob = new Blob([response.data], {
-			type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-		})
+		const blob = await visitsApi.generateVisitFile(planData)
 		const url = window.URL.createObjectURL(blob)
 		const link = document.createElement('a')
 		link.href = url
@@ -200,11 +193,9 @@ const handlePlanVisits = async () => {
 		isPlanning.value = false
 	}
 }
-// Fetch users function (add this)
 const fetchUsers = async () => {
 	try {
-		const response = await api.get('/users') // Adjust endpoint
-		users.value = response.data.users
+		users.value = await usersApi.getAll()
 	} catch (err) {
 		errorApi.logError(err)
 		console.error('Failed to fetch users:', err)
