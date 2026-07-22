@@ -1,3 +1,18 @@
-// src/types/index.ts
-export type { User, LoginCredentials } from './user'
-export type { Visit } from './visit' // Add whatever types you have in visit.ts
+export type {
+  DeletedAt,
+  Model,
+  UserWithoutVisits,
+  VisitWithoutUserOrDebitors,
+  DebitorWithoutVisits,
+  VisitStatus,
+  VisitType,
+  VisitStatusLog,
+  ContactQuestions,
+  PaymentQuestions,
+  AssetQuestions,
+  PropertyQuestions,
+  MonetaryQuestions,
+  Asset,
+  VisitResponseImage,
+  VisitResponse,
+} from '@/schemas'

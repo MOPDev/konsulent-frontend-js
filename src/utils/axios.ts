@@ -1,5 +1,4 @@
 import axios from 'axios'
-import type { User, LoginCredentials } from '@/types/index'
 
 const api = axios.create({
 	baseURL: import.meta.env.VITE_API_BASE_URL as string,
@@ -19,14 +18,6 @@ api.interceptors.response.use(
 		return Promise.reject(err)
 	},
 )
-
-export const userApi = {
-	getAll: () => api.get<User[]>('/users'),
-	getById: (id: number) => api.get<User>(`/users/${id}`),
-	create: (data: Partial<User>) => api.post<User>('/users', data),
-	update: (id: number, data: Partial<User>) => api.patch<User>(`/users/${id}`, data),
-	delete: (id: number) => api.delete(`/users/${id}`),
-}
 
 export const errorApi = {
 	log: (errorText: string) => {

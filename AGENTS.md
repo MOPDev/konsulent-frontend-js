@@ -3,7 +3,7 @@
 ## Backend Context
 
 - Backend: Go/Gin + GORM + SQL Server
-- Backend repo: `C:\Users\mkk\go\src\github.com\markuskjeldsen\mop-backend-api`
+- Backend repo: `C:\Users\mkk\go\src\github.com\MOPDev\mop-backend-api`
 - API base: `/api/v1` or `/api/v2`
 
 ## Visit Grouping (group_id)
