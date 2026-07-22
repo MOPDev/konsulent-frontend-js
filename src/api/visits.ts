@@ -67,6 +67,17 @@ export const visitsApi = {
 	generateVisitFile: (data: { visitIds: number[]; userId: string; date: string }) =>
 		client.post('/visits/visitfile', data, undefined, { responseType: 'blob' }),
 
+	// --- Cancel/Soft-delete ---
+
+	updateVisit: (id: number, data: Partial<{ cancelled: boolean }>) =>
+		client.patch(`/visits/planned/${id}`, data),
+
+	cancelVisit: (id: number) =>
+		client.patch(`/visits/planned/${id}`, { cancelled: true }),
+
+	uncancelVisit: (id: number) =>
+		client.patch(`/visits/planned/${id}`, { cancelled: false }),
+
 	// --- Group operations ---
 
 	changeGroupDate: (groupId: number, newDate: string) =>

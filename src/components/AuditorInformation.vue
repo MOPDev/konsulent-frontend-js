@@ -20,6 +20,7 @@
 				<thead>
 					<tr>
 						<th>Status</th>
+						<th>Type</th>
 						<th>Adresse</th>
 						<th>Ankomst</th>
 						<th>Sagsnr</th>
@@ -48,9 +49,13 @@ import { useAuthStore, USER_RIGHTS } from '@/stores/auth'
 interface VisitItem {
 	ID: number
 	id?: number
+	address: string
+	sagsnr: number
 	visit_date: string
 	visit_time?: string
 	status_id: number
+	cancelled?: boolean | null
+	type?: { text: string }
 	[key: string]: unknown
 }
 
@@ -71,6 +76,15 @@ function getTodayString(): string {
 	return `${yyyy}-${mm}-${dd}`
 }
 
+function getWeekEndString(): string {
+	const end = new Date()
+	end.setDate(end.getDate() + 7)
+	const yyyy = end.getFullYear()
+	const mm = String(end.getMonth() + 1).padStart(2, '0')
+	const dd = String(end.getDate()).padStart(2, '0')
+	return `${yyyy}-${mm}-${dd}`
+}
+
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 
@@ -81,17 +95,18 @@ const isPrivileged = computed(() => {
 	)
 })
 
-const visibleVisits = computed<any[]>(() => {
-	const allVisits = props.auditor?.visits || []
+const visibleVisits = computed<VisitItem[]>(() => {
+	const allVisits = (props.auditor?.visits || []) as VisitItem[]
 	const role = user.value?.rights
 
 	if (isPrivileged.value) {
 		return allVisits
 	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
 		const todayString = getTodayString()
+		const weekEndString = getWeekEndString()
 		return allVisits.filter((visit) => {
 			const visitDay = visit.visit_date?.slice(0, 10)
-			return new Date(visitDay) >= new Date(todayString) && visit.status_id === 3
+			return visitDay >= todayString && visitDay <= weekEndString && visit.status_id === 3
 		})
 	} else {
 		console.error('Unknown user role:', role)
@@ -126,8 +141,9 @@ const groupedVisitsByDate = computed(() => {
 	}
 
 	const todayString = getTodayString()
+	const weekEndString = getWeekEndString()
 	for (const [date] of map.entries()) {
-		if (date < todayString) map.delete(date)
+		if (date < todayString || date > weekEndString) map.delete(date)
 	}
 
 	return [...map.entries()].map(([date, visits]) => ({ date, visits }))

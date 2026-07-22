@@ -42,14 +42,18 @@ function toggleExpanded() {
 	expanded.value = !expanded.value
 }
 
-api.get('/visit-response/all')
-	.then((response) => {
-		auditor.value = response.data.users.find((user: Auditor) => user.ID === ID) ?? null
-	})
-	.catch((error: any) => {
-		console.error('Error fetching auditor data:', error)
-		errorApi.log('Error fetching auditor data: ' + error.message)
-	})
+function fetchAuditor() {
+	api.get('/visit-response/all')
+		.then((response) => {
+			auditor.value = response.data.users.find((user: Auditor) => user.ID === ID) ?? null
+		})
+		.catch((error: any) => {
+			console.error('Error fetching auditor data:', error)
+			errorApi.log('Error fetching auditor data: ' + error.message)
+		})
+}
+
+fetchAuditor()
 </script>
 
 <style scoped>

@@ -16,6 +16,10 @@ import api from '@/utils/axios'
 import { useRoute } from 'vue-router'
 
 interface Visit {
+	ID: number
+	address: string
+	sagsnr: number
+	status_id: number
 	visit_date: string
 	[key: string]: unknown
 }

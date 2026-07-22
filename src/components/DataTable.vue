@@ -38,11 +38,12 @@
 				</tr>
 			</thead>
 			<tbody>
-				<tr v-for="(item, index) in paginatedData" :key="`${item.sagsnr}-${index}`">
+				<tr v-for="(item, index) in paginatedData" :key="`${item.sagsnr}-${index}`" :class="rowClass?.(item) || ''">
 					<td v-if="selectable">
 						<input
 							type="checkbox"
 							:checked="isSelected(item)"
+							:disabled="disableSelectionCheck?.(item) || false"
 							@change="toggleSelection(item, ($event.target as HTMLInputElement).checked)"
 						/>
 					</td>
@@ -111,6 +112,8 @@ const props = withDefaults(defineProps<{
   paginated?: boolean
   pageSize?: number
   modelValue?: (number | string)[]
+  rowClass?: (item: DataItem) => string | undefined
+  disableSelectionCheck?: (item: DataItem) => boolean | undefined
 }>(), {
   selectable: false,
   filterable: false,

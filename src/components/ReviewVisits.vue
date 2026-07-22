@@ -37,6 +37,8 @@
 					:page-size="100"
 					v-model="selectedVisitIds"
 					@selection-ids-changed="handleSelectionChange"
+					:row-class="(item: any) => item.cancelled ? 'cancelled-row' : undefined"
+					:disable-selection-check="(item: any) => !!item.cancelled"
 				>
 					<template #cell-konsulentName="{ item }">
 						{{ item.konsulentName }}
@@ -57,6 +59,24 @@
 					</template>
 					<template #cell-group_id="{ item }">
 						<span v-if="item.group_id" class="group-badge">{{ item.group_id }}</span>
+					</template>
+					<template #cell-actions="{ item }">
+						<button
+							v-if="!item.cancelled"
+							@click="handleCancel(item)"
+							class="cancel-btn"
+							title="Afmeld besøg"
+						>
+							Afmeld
+						</button>
+						<button
+							v-else
+							@click="handleUncancel(item)"
+							class="uncancel-btn"
+							title="Fortryd afmelding"
+						>
+							Fortryd
+						</button>
 					</template>
 				</DataTable>
 			</div>
@@ -87,11 +107,13 @@ interface VisitData {
   stop_nr?: number
   group_id?: number | null
   status?: { ID: number; text: string }
+  status_id?: number
   konsulentName?: string
   user?: { name: string }
   debitors: Array<{ ID: number; name: string }>
   type: { text: string }
   visit_response?: { actual_time: string } | null
+  cancelled?: boolean | null
   [key: string]: unknown
 }
 
@@ -117,6 +139,7 @@ const columns: Column[] = [
 	{ key: 'type.text', label: 'Type', sortable: true, filterable: true },
 	{ key: 'status', label: 'Status', sortable: false, filterable: true },
 	{ key: 'group_id', label: 'Gruppe', sortable: true, filterable: true },
+	{ key: 'actions', label: '', sortable: false, filterable: false },
 ]
 
 const visits = ref<VisitData[]>([])
@@ -203,6 +226,30 @@ function toggleGroup(key: string) {
 		expandedGroups.value.add(key)
 	}
 	expandedGroups.value = new Set(expandedGroups.value)
+}
+
+async function handleCancel(visit: any) {
+	error.value = null
+	try {
+		await visitsApi.cancelVisit(visit.ID)
+		visit.cancelled = true
+	} catch (err: any) {
+		console.error('Error cancelling visit:', err)
+		error.value = 'Fejl ved afmelding af besøg'
+		errorApi.logError(err)
+	}
+}
+
+async function handleUncancel(visit: any) {
+	error.value = null
+	try {
+		await visitsApi.uncancelVisit(visit.ID)
+		visit.cancelled = false
+	} catch (err: any) {
+		console.error('Error uncancelling visit:', err)
+		error.value = 'Fejl ved fortryd af afmelding'
+		errorApi.logError(err)
+	}
 }
 
 async function moveToStatus5() {
@@ -339,6 +386,50 @@ const getPdf = async (id: number) => {
 	border-radius: 0.25rem;
 	font-size: 0.75rem;
 	font-weight: 500;
+}
+
+.cancel-btn {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	border: 1px solid #ef4444;
+	background: white;
+	color: #ef4444;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+	background-color: #fef2f2;
+}
+
+.uncancel-btn {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	border: 1px solid #6b7280;
+	background: white;
+	color: #6b7280;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.uncancel-btn:hover {
+	background-color: #f3f4f6;
+}
+
+:deep(.cancelled-row) {
+	text-decoration: line-through;
+	color: #9ca3af;
+	background-color: #fef2f2 !important;
+}
+
+:deep(.cancelled-row) td {
+	color: #9ca3af;
+}
+
+:deep(.cancelled-row:hover) {
+	background-color: #fef2f2 !important;
 }
 
 @media (max-width: 480px) {
