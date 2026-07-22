@@ -48,9 +48,10 @@ import PaymentSection from '@/components/forms/PaymentSection.vue'
 import AssetCarSection from '@/components/forms/AssetCarSection.vue'
 import OtherAssetsSection from '@/components/forms/OtherAssetsSection.vue'
 import FormActions from '@/components/forms/FormActions.vue'
+import type { VisitWithDebitors } from '@/api/visits'
 
 const props = defineProps<{
-	visitData: any
+	visitData: VisitWithDebitors
 	formData: any
 	isSubmitting?: boolean
 	docBlob?: any

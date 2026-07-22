@@ -170,19 +170,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
-
-interface Debitor {
-	ID: number
-	name: string
-	phone?: string
-	phone_work?: string
-	email?: string
-}
+import { DebitorWithoutVisits } from '@/schemas/index'
 
 const props = defineProps<{
 	formData: Record<string, unknown>
 	showWorkerMet: boolean
-	debitors: Debitor[]
+	debitors: DebitorWithoutVisits[]
 }>()
 
 const fd = computed<any>({

@@ -159,9 +159,10 @@ import MoneyRangeSelector from '@/components/forms/MoneyRangeSelector.vue'
 import FormActions from '@/components/forms/FormActions.vue'
 import YesNo from '@/components/forms/YesNo.vue'
 import SelectField from '@/components/forms/SelectField.vue'
+import type { VisitWithDebitors } from '@/api/visits'
 
 const props = defineProps<{
-	visitData: any
+	visitData: VisitWithDebitors
 	formData: any
 	isSubmitting?: boolean
 	docBlob?: any

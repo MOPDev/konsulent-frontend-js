@@ -77,6 +77,7 @@ import DocxPdfViewer from '@/components/DocxPdfViewer.vue'
 import ContactSection from '@/components/forms/ContactSection.vue'
 import FileUpload from './FileUpload.vue'
 import { renderAsync } from 'docx-preview'
+import type { VisitWithDebitors } from '@/api/visits'
 
 const wordContainer = ref<HTMLDivElement | null>(null)
 const expanded = ref(false)
@@ -85,7 +86,7 @@ const toggleExpanded = () => {
 }
 
 const props = defineProps<{
-	visitData: any
+	visitData: VisitWithDebitors
 	formData: any
 	isSubmitting?: boolean
 	docBlob?: any
@@ -136,10 +137,10 @@ function calculateAge(birthday: string | undefined): number | string {
 }
 
 const filteredData = computed(() => {
-	const visit = props.visitData || {}
-	const debitors = ((visit.debitors as any[]) || []).map((d: any) => ({
+	const visit = props.visitData
+	const debitors = (visit?.debitors || []).map((d) => ({
 		...d,
-		age: calculateAge(d.birthday as string | undefined),
+		age: calculateAge(d.birthday ? String(d.birthday) : undefined),
 	}))
 	return { ...visit, debitors }
 })

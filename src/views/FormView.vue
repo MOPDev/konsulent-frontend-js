@@ -8,7 +8,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -18,7 +18,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -28,7 +28,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -38,7 +38,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -62,6 +62,7 @@ import LetterForm from '@/components/forms/LetterForm.vue'
 
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
+import { visitsApi, type VisitWithDebitors } from '@/api/visits'
 
 interface ImageItem {
 	file: File
@@ -145,7 +146,7 @@ interface FormData {
 const router = useRouter()
 const route = useRoute()
 const ID = Number(route.params.id)
-const visitData = ref<any>(null)
+const visitData = ref<(VisitWithDebitors & { debt?: any }) | null>(null)
 const isSubmitting = ref<boolean>(false)
 const isCapturingLocation = ref<boolean>(false)
 const debtData = ref<any>(null)
@@ -298,14 +299,10 @@ onMounted(async () => {
 	startTime.value = new Date()
 
 	try {
-		const response = await api.get('/visits/byId', {
-			params: { id: ID },
-		})
+		visitData.value = await visitsApi.getById(ID)
 		const debt = await api.get('/visits/debt', { params: { VisitId: ID } })
 
-		visitData.value = response.data.visit
-
-		visitData.value.debt = debt.data[0]
+		if (visitData.value) visitData.value.debt = debt.data[0]
 		debtData.value = debt
 
 		await getLocation()
