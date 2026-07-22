@@ -25,4 +25,14 @@ export default defineConfig({
 			'@': fileURLToPath(new URL('./src', import.meta.url)),
 		},
 	},
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks: {
+					pdfjs: ['pdfjs-dist'], // if using pdfjs
+					vendor: ['vue', 'vue-router', 'pinia'], // core libraries
+				},
+			},
+		},
+	},
 })
