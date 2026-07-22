@@ -49,7 +49,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useVisitForm } from '@/composables/useVisitForm'
 import FormHeader from '@/components/forms/FormHeader.vue'
 import DebitorPanel from '@/components/forms/DebitorPanel.vue'
@@ -60,13 +60,18 @@ import OtherAssetsSection from '@/components/forms/OtherAssetsSection.vue'
 import FormActions from '@/components/forms/FormActions.vue'
 import YesNo from '@/components/forms/YesNo.vue'
 
-const props = defineProps({
-	visitData: { type: Object, required: true },
-	formData: { type: Object, required: true },
-	isSubmitting: { type: Boolean, default: false },
-	docBlob: { type: Object, default: null },
-})
-const emit = defineEmits(['update:formData', 'submit', 'images', 'remove-image'])
+const props = defineProps<{
+	visitData: any
+	formData: any
+	isSubmitting?: boolean
+	docBlob?: any
+}>()
+const emit = defineEmits<{
+	(e: 'update:formData', val: any): void
+	(e: 'submit'): void
+	(e: 'images', val: any): void
+	(e: 'remove-image', index: number): void
+}>()
 
 const { fd, filteredData } = useVisitForm(props, emit)
 </script>

@@ -23,7 +23,7 @@
 				</div>
 
 				<div v-if="group.key !== 'other'" class="group-actions" @click.stop>
-					<button @click="downloadGroupExcel(group.key)" class="small-btn">
+					<button @click="downloadGroupExcel(Number(group.key))" class="small-btn">
 						Download Excel
 					</button>
 				</div>
@@ -67,13 +67,44 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { visitsApi } from '@/api/visits'
 import { errorApi } from '@/utils/axios'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
 
-const columns = [
+interface Column {
+  key: string
+  label: string
+  sortable?: boolean
+  filterable?: boolean
+  copyable?: boolean
+}
+
+interface VisitData {
+  ID: number
+  sagsnr: number
+  address: string
+  visit_date: string
+  visit_time?: string
+  stop_nr?: number
+  group_id?: number | null
+  status?: { ID: number; text: string }
+  status_id?: number
+  konsulentName?: string
+  user?: { name: string }
+  debitors: Array<{ ID: number; name: string }>
+  type: { text: string }
+  [key: string]: unknown
+}
+
+interface VisitGroup {
+  key: string
+  visits: VisitData[]
+  date: string | null
+}
+
+const columns: Column[] = [
 	{ key: 'ID', label: 'Besøgs ID', sortable: true, filterable: true },
 	{ key: 'konsulentName', label: 'Konsulent', sortable: true, filterable: true },
 	{ key: 'sagsnr', label: 'Sags nummer', copyable: true, sortable: true, filterable: true },
@@ -86,25 +117,25 @@ const columns = [
 	{ key: 'group_id', label: 'Gruppe', sortable: true, filterable: true },
 ]
 
-const visits = ref([])
-const selectedVisitIds = ref([])
-const error = ref(null)
-const tableRefs = ref({})
-const expandedGroups = ref(new Set())
+const visits = ref<VisitData[]>([])
+const selectedVisitIds = ref<(number | string)[]>([])
+const error = ref<string | null>(null)
+const tableRefs = ref<Record<string, any>>({})
+const expandedGroups = ref<Set<string>>(new Set())
 
-const setTableRef = (key, el) => {
+const setTableRef = (key: string, el: any) => {
 	if (el) tableRefs.value[key] = el
 }
 
-const groupedVisits = computed(() => {
-	const groups = {}
-	const other = []
+const groupedVisits = computed<VisitGroup[]>(() => {
+	const groups: Record<string, VisitGroup> = {}
+	const other: VisitData[] = []
 
 	visits.value.forEach((visit) => {
 		if (visit.group_id && visit.group_id !== 0) {
 			const key = String(visit.group_id)
 			if (!groups[key]) {
-				groups[key] = { key, visits: [] }
+				groups[key] = { key, visits: [], date: null }
 			}
 			groups[key].visits.push(visit)
 		} else {
@@ -114,18 +145,18 @@ const groupedVisits = computed(() => {
 
 	Object.values(groups).forEach((group) => {
 		group.visits.sort((a, b) => (a.stop_nr ?? 0) - (b.stop_nr ?? 0))
-		group.date = group.visits[0]?.visit_date
+		group.date = group.visits[0]?.visit_date ?? null
 	})
 
 	const sortedGroups = Object.values(groups).sort((a, b) => {
-		return new Date(b.date) - new Date(a.date) // b-a = newest first
+		return new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime()
 	})
 
 	if (other.length > 0) {
 		other.sort((a, b) => {
-			const dateA = new Date(a.visit_date)
-			const dateB = new Date(b.visit_date)
-			if (dateB - dateA !== 0) return dateB - dateA // b-a = newest first
+			const dateA = new Date(a.visit_date).getTime()
+			const dateB = new Date(b.visit_date).getTime()
+			if (dateB - dateA !== 0) return dateB - dateA
 			return (b.visit_time || '').localeCompare(a.visit_time || '')
 		})
 		sortedGroups.push({ key: 'other', visits: other, date: null })
@@ -139,35 +170,35 @@ onMounted(getNotVisitedVisits)
 async function getNotVisitedVisits() {
 	try {
 		const result = await visitsApi.getByStatus(3)
-		visits.value = (result || []).map((visit) => ({
+		visits.value = (result || []).map((visit: any) => ({
 			...visit,
 			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
 		}))
 		error.value = null
-	} catch (err) {
+	} catch (err: any) {
 		error.value = 'Fejl ved hentning af besøg: ' + err.message
 		console.error('Error fetching not visited visits:', err)
 		errorApi.logError(err)
 	}
 }
 
-function formatAddress(address) {
+function formatAddress(address: string): string {
 	if (!address) return ''
 	return address.replace(/\r?\n/g, ', ')
 }
 
-function formatDate(date) {
+function formatDate(date: string | null | undefined): string {
 	if (!date) return ''
 	const d = new Date(date)
-	if (isNaN(d)) return ''
+	if (isNaN(d.getTime())) return ''
 	return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
 }
 
-const handleSelectionChange = (selectedIds) => {
+const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisitIds.value = selectedIds
 }
 
-function toggleGroup(key) {
+function toggleGroup(key: string) {
 	if (expandedGroups.value.has(key)) {
 		expandedGroups.value.delete(key)
 	} else {
@@ -176,7 +207,7 @@ function toggleGroup(key) {
 	expandedGroups.value = new Set(expandedGroups.value)
 }
 
-async function downloadGroupExcel(groupId) {
+async function downloadGroupExcel(groupId: number) {
 	try {
 		const response = await visitsApi.downloadGroupExcel(groupId)
 		const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -187,7 +218,7 @@ async function downloadGroupExcel(groupId) {
 		link.click()
 		link.remove()
 		window.URL.revokeObjectURL(url)
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error downloading Excel:', err)
 		error.value = 'Fejl ved download af Excel'
 		errorApi.logError(err)
@@ -204,20 +235,20 @@ async function handleDeleteVisits() {
 	error.value = null
 	try {
 		const ops = selectedVisitIds.value.map((id) =>
-			visitsApi.delete(id),
+			visitsApi.delete(Number(id)),
 		)
 		const results = await Promise.allSettled(ops)
 
-		results.forEach((r, i) => {
+		results.forEach((r: PromiseSettledResult<any>, i: number) => {
 			if (r.status !== 'fulfilled') {
 				console.error(`Failed to delete ${selectedVisitIds.value[i]}:`, r.reason)
 			}
 		})
 
 		selectedVisitIds.value = []
-		Object.values(tableRefs.value).forEach((table) => table?.clearSelection())
+		Object.values(tableRefs.value).forEach((table: any) => table?.clearSelection())
 		await getNotVisitedVisits()
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error deleting visits:', err)
 		error.value = 'Fejl ved sletning af besøg'
 		errorApi.logError(err)

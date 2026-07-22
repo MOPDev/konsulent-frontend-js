@@ -4,15 +4,13 @@
   </p>
 </template>
 
-<script>
-export default {
-  props: {
-    number: { type: Number, required: true },
-    text: { type: String, required: true },
-    activeClass: { type: String, default: '' },
-    applyClassToAll: { type: Boolean, default: false },
-  },
-}
+<script setup lang="ts">
+defineProps<{
+  number: number
+  text: string
+  activeClass?: string
+  applyClassToAll?: boolean
+}>()
 </script>
 
 <style lang="sass" scoped>

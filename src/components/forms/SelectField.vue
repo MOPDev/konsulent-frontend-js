@@ -25,44 +25,43 @@
 	</fieldset>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps({
-	label: { type: String, required: true },
-	name: { type: String, required: true }, // unique per question
-	modelValue: { type: [String, Number, Boolean, null], default: null },
-	required: { type: Boolean, default: false },
-	disabled: { type: Boolean, default: false },
+type SelectOption = string | { value: string | number; label: string }
 
-	// List of options: can be ['A', 'B'] or [{ value: 'A', label: 'A' }, ...]
-	options: {
-		type: Array,
-		required: true,
-		validator: (arr) =>
-			arr.every(
-				(o) =>
-					typeof o === 'string' ||
-					(o && typeof o === 'object' && 'value' in o && 'label' in o),
-			),
-	},
+interface Props {
+	label: string
+	name: string
+	modelValue?: string | number | boolean | null
+	required?: boolean
+	disabled?: boolean
+	options: SelectOption[]
+	placeholder?: string
+	inputLabel?: string
+}
 
-	// Optional UI niceties
-	placeholder: { type: String, default: '' },
-	inputLabel: { type: String, default: '' }, // if you want label text different from legend
+const props = withDefaults(defineProps<Props>(), {
+	modelValue: null,
+	required: false,
+	disabled: false,
+	placeholder: '',
+	inputLabel: '',
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+	(e: 'update:modelValue', value: string | number | boolean | null): void
+}>()
 
 const val = computed({
 	get: () => props.modelValue,
-	set: (v) => emit('update:modelValue', v),
+	set: (v: string | number | boolean | null) => emit('update:modelValue', v),
 })
 
 const id = `${props.name}-select`
 
 const normalizedOptions = computed(() =>
-	props.options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o)),
+	props.options.map((o: SelectOption) => (typeof o === 'string' ? { value: o, label: o } : o)),
 )
 </script>
 

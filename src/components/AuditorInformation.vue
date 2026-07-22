@@ -39,20 +39,31 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import VisitCard from './VisitCard.vue'
 import PrintDayButton from './PrintDayButton.vue'
-import { useAuthStore, USER_RIGHTS } from '@/stores/auth.js'
+import { useAuthStore, USER_RIGHTS } from '@/stores/auth'
 
-const props = defineProps({
-	auditor: {
-		type: Object,
-		required: true,
-	},
-})
+interface VisitItem {
+	ID: number
+	id?: number
+	visit_date: string
+	visit_time?: string
+	status_id: number
+	[key: string]: unknown
+}
 
-function getTodayString() {
+interface AuditorInfo {
+	visits?: VisitItem[]
+	[key: string]: unknown
+}
+
+const props = defineProps<{
+	auditor: AuditorInfo
+}>()
+
+function getTodayString(): string {
 	const today = new Date()
 	const yyyy = today.getFullYear()
 	const mm = String(today.getMonth() + 1).padStart(2, '0')
@@ -70,7 +81,7 @@ const isPrivileged = computed(() => {
 	)
 })
 
-const visibleVisits = computed(() => {
+const visibleVisits = computed<any[]>(() => {
 	const allVisits = props.auditor?.visits || []
 	const role = user.value?.rights
 
@@ -88,13 +99,13 @@ const visibleVisits = computed(() => {
 	}
 })
 
-const timeToMs = (t) => {
+const timeToMs = (t: string | undefined): number => {
 	if (!t) return 0
 	const [h, m = 0, s = 0] = t.split(':').map(Number)
 	return ((h * 60 + m) * 60 + s) * 1000
 }
 
-const dayFromUtcISO = (iso) => iso.slice(0, 10)
+const dayFromUtcISO = (iso: string): string => iso.slice(0, 10)
 
 const groupedVisitsByDate = computed(() => {
 	const sorted = [...visibleVisits.value].sort((a, b) => {
@@ -103,11 +114,11 @@ const groupedVisitsByDate = computed(() => {
 		return aKey - bKey
 	})
 
-	const map = new Map()
+	const map = new Map<string, VisitItem[]>()
 	for (const v of sorted) {
 		const day = dayFromUtcISO(v.visit_date)
 		if (!map.has(day)) map.set(day, [])
-		map.get(day).push(v)
+		map.get(day)!.push(v)
 	}
 
 	for (const arr of map.values()) {

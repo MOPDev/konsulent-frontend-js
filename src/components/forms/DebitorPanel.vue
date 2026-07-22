@@ -14,13 +14,18 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import DocxPdfViewer from '@/components/DocxPdfViewer.vue'
 
-defineProps({
-  debitorName: { type: String, default: '—' },
-  docBlob: { type: Object, default: null },
+interface Props {
+  debitorName?: string
+  docBlob?: any
+}
+
+withDefaults(defineProps<Props>(), {
+  debitorName: '—',
+  docBlob: null,
 })
 
 const expanded = ref(false)

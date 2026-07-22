@@ -35,17 +35,17 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 
-const props = defineProps({
-	formData: { type: Object, required: true },
-	required: { type: Boolean, default: false },
-	showAmount: { type: Boolean, default: true },
-})
+const props = defineProps<{
+	formData: Record<string, unknown>
+	required?: boolean
+	showAmount?: boolean
+}>()
 
-const fd = computed({
+const fd = computed<any>({
 	get: () => props.formData,
 	set: () => {},
 })
@@ -59,8 +59,7 @@ const formattedAmount = computed({
 			maximumFractionDigits: 2,
 		}).format(val)
 	},
-	set(str) {
-		// ponytail: da-DK only (. thousands, , decimal), extend if locale becomes dynamic
+	set(str: string) {
 		const num = parseFloat(str.replace(/\./g, '').replace(',', '.'))
 		fd.value.payment.PaymentAmount = isNaN(num) ? null : num
 	},

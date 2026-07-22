@@ -61,13 +61,44 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { visitsApi } from '@/api/visits'
 import { errorApi } from '@/utils/axios'
 import DataTable from './DataTable.vue'
 
-const columns = [
+interface Column {
+  key: string
+  label: string
+  sortable?: boolean
+  filterable?: boolean
+  copyable?: boolean
+}
+
+interface VisitData {
+  ID: number
+  sagsnr: number
+  address: string
+  visit_date: string
+  visit_time?: string
+  stop_nr?: number
+  group_id?: number | null
+  status?: { ID: number; text: string }
+  konsulentName?: string
+  user?: { name: string }
+  debitors: Array<{ ID: number; name: string }>
+  type: { text: string }
+  visit_response?: { actual_time: string } | null
+  [key: string]: unknown
+}
+
+interface VisitGroup {
+  key: string
+  visits: VisitData[]
+  date: string | null
+}
+
+const columns: Column[] = [
 	{ key: 'ID', label: 'ID', sortable: true, filterable: true },
 	{ key: 'konsulentName', label: 'Konsulent', sortable: true, filterable: true },
 	{ key: 'sagsnr', label: 'Sagsnr', copyable: true, sortable: true, filterable: true },
@@ -83,24 +114,24 @@ const columns = [
 	{ key: 'type.text', label: 'Type', sortable: true, filterable: true },
 ]
 
-const visits = ref([])
-const selectedVisitIds = ref([])
-const error = ref(null)
-const tableRefs = ref({})
-const expandedGroups = ref(new Set())
+const visits = ref<VisitData[]>([])
+const selectedVisitIds = ref<(number | string)[]>([])
+const error = ref<string | null>(null)
+const tableRefs = ref<Record<string, any>>({})
+const expandedGroups = ref<Set<string>>(new Set())
 
-const setTableRef = (key, el) => {
+const setTableRef = (key: string, el: any) => {
 	if (el) tableRefs.value[key] = el
 }
 
-const groupedVisits = computed(() => {
-	const groups = {}
-	const other = []
+const groupedVisits = computed<VisitGroup[]>(() => {
+	const groups: Record<string, VisitGroup> = {}
+	const other: VisitData[] = []
 
 	visits.value.forEach((visit) => {
 		if (visit.group_id && visit.group_id !== 0) {
 			const key = String(visit.group_id)
-			if (!groups[key]) groups[key] = { key, visits: [] }
+			if (!groups[key]) groups[key] = { key, visits: [], date: null }
 			groups[key].visits.push(visit)
 		} else {
 			other.push(visit)
@@ -109,15 +140,15 @@ const groupedVisits = computed(() => {
 
 	Object.values(groups).forEach((group) => {
 		group.visits.sort((a, b) => (a.stop_nr ?? 0) - (b.stop_nr ?? 0))
-		group.date = group.visits[0]?.visit_date
+		group.date = group.visits[0]?.visit_date ?? null
 	})
 
-	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date) - new Date(a.date))
+	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
 
 	if (other.length > 0) {
 		other.sort((a, b) => {
-			const dateA = new Date(a.visit_date)
-			const dateB = new Date(b.visit_date)
+			const dateA = new Date(a.visit_date).getTime()
+			const dateB = new Date(b.visit_date).getTime()
 			if (dateA - dateB !== 0) return dateA - dateB
 			return (a.visit_time || '').localeCompare(b.visit_time || '')
 		})
@@ -132,35 +163,35 @@ onMounted(fetchVisits)
 async function fetchVisits() {
 	try {
 		const result = await visitsApi.getByStatus(5)
-		visits.value = (result || []).map((visit) => ({
+		visits.value = (result || []).map((visit: any) => ({
 			...visit,
 			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
 		}))
 		error.value = null
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error fetching archived visits:', err)
 		error.value = 'Fejl ved hentning af arkiv: ' + err.message
 		errorApi.logError(err)
 	}
 }
 
-function formatAddress(address) {
+function formatAddress(address: string): string {
 	if (!address) return ''
 	return address.replace(/\r?\n/g, ', ')
 }
 
-function formatDate(date) {
+function formatDate(date: string | null | undefined): string {
 	if (!date) return ''
 	const d = new Date(date)
-	if (isNaN(d)) return ''
+	if (isNaN(d.getTime())) return ''
 	return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
 }
 
-const handleSelectionChange = (selectedIds) => {
+const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisitIds.value = selectedIds
 }
 
-function toggleGroup(key) {
+function toggleGroup(key: string) {
 	if (expandedGroups.value.has(key)) {
 		expandedGroups.value.delete(key)
 	} else {
@@ -170,10 +201,10 @@ function toggleGroup(key) {
 }
 
 function requestPdfs() {
-	selectedVisitIds.value.forEach((id) => getPdf(id))
+	selectedVisitIds.value.forEach((id) => getPdf(Number(id)))
 }
 
-const getPdf = async (id) => {
+const getPdf = async (id: number) => {
 	try {
 		const response = await visitsApi.downloadPdf(id)
 
@@ -191,7 +222,7 @@ const getPdf = async (id) => {
 		link.click()
 		document.body.removeChild(link)
 		window.URL.revokeObjectURL(url)
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error fetching PDF:', err)
 		error.value = 'Fejl ved hentning af PDF'
 		errorApi.logError(err)

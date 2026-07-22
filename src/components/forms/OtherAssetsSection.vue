@@ -42,15 +42,15 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import FileUpload from '@/components/forms/FileUpload.vue'
 
-const props = defineProps({
-	formData: { type: Object, required: true },
-})
+const props = defineProps<{
+	formData: Record<string, unknown>
+}>()
 
-const fd = computed({
+const fd = computed<any>({
 	get: () => props.formData,
 	set: () => {},
 })
@@ -63,7 +63,7 @@ function addAsset() {
 	fd.value.other_assets.push({ regnr: '', image: null })
 }
 
-function removeAsset(index) {
+function removeAsset(index: number) {
 	fd.value.other_assets.splice(index, 1)
 }
 </script>

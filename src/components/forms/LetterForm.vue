@@ -30,7 +30,7 @@
 			<!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
 			<ContactSection
 				:form-data="fd"
-				:show-worker-met="filteredData?.debitors?.some((d) => d.is_company)"
+				:show-worker-met="filteredData?.debitors?.some((d: any) => d.is_company)"
 				:debitors="filteredData?.debitors || []"
 			/>
 
@@ -71,25 +71,25 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import DocxPdfViewer from '@/components/DocxPdfViewer.vue'
 import ContactSection from '@/components/forms/ContactSection.vue'
 import FileUpload from './FileUpload.vue'
 import { renderAsync } from 'docx-preview'
 
-const wordContainer = ref(null)
+const wordContainer = ref<HTMLDivElement | null>(null)
 const expanded = ref(false)
 const toggleExpanded = () => {
 	expanded.value = !expanded.value
 }
 
-const props = defineProps({
-	visitData: { type: Object, required: true },
-	formData: { type: Object, required: true },
-	isSubmitting: { type: Boolean, default: false },
-	docBlob: { type: Object, default: null },
-})
+const props = defineProps<{
+	visitData: any
+	formData: any
+	isSubmitting?: boolean
+	docBlob?: any
+}>()
 
 watch(
 	[() => props.docBlob, wordContainer],
@@ -106,19 +106,24 @@ watch(
 	{ immediate: true },
 )
 
-const emit = defineEmits(['update:formData', 'submit', 'images', 'remove-image'])
-function removeAt(index) {
+const emit = defineEmits<{
+	(e: 'update:formData', val: any): void
+	(e: 'submit'): void
+	(e: 'images', val: any): void
+	(e: 'remove-image', index: number): void
+}>()
+function removeAt(index: number) {
 	emit('remove-image', index)
 }
-function onUpdateFiles(next) {
+function onUpdateFiles(next: any[]) {
 	emit('update:formData', { ...props.formData, images: next })
 }
 const fd = computed({
 	get: () => props.formData,
-	set: (v) => emit('update:formData', v),
+	set: (v: any) => emit('update:formData', v),
 })
 
-function calculateAge(birthday) {
+function calculateAge(birthday: string | undefined): number | string {
 	if (!birthday) return ''
 	const birthDate = new Date(birthday)
 	const today = new Date()
@@ -132,9 +137,9 @@ function calculateAge(birthday) {
 
 const filteredData = computed(() => {
 	const visit = props.visitData || {}
-	const debitors = (visit.debitors || []).map((d) => ({
+	const debitors = ((visit.debitors as any[]) || []).map((d: any) => ({
 		...d,
-		age: calculateAge(d.birthday),
+		age: calculateAge(d.birthday as string | undefined),
 	}))
 	return { ...visit, debitors }
 })

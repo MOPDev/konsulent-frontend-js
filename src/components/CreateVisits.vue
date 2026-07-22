@@ -42,11 +42,29 @@
 	<div v-else-if="error">{{ error }}</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import api from '@/utils/axios.js'
+import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
 import DataTable from '@/components/DataTable.vue'
+
+interface AvailableVisit {
+	sagsnr: number | string
+	klientnavn: string
+	sagvedr: string
+	adresse: string
+	postnr: string
+	bynavn: string
+	status: string
+	frist_dato: string
+	debtors: { navn: string }[]
+	index?: number
+}
+
+interface VisitType {
+	ID: number
+	text: string
+}
 
 const columns = [
 	{ key: 'sagsnr', label: 'Sags nummer', sortable: true, filterable: true },
@@ -57,16 +75,16 @@ const columns = [
 	{ key: 'frist_dato', label: 'Frist dato', sortable: true, filterable: true },
 ]
 
-const availableVisits = ref([])
-const dataTableRef = ref(null)
-const selectedVisitsSagsnr = ref([])
-const selectedVisitIds = ref([])
-const selectedDebtors = ref({})
-const error = ref(null)
-const selectedVisitType = ref(null)
-const visitTypes = ref([])
+const availableVisits = ref<AvailableVisit[]>([])
+const dataTableRef = ref<InstanceType<typeof DataTable> | null>(null)
+const selectedVisitsSagsnr = ref<(number | string)[]>([])
+const selectedVisitIds = ref<(number | string)[]>([])
+const selectedDebtors = ref<Record<string, number[]>>({})
+const error = ref<string | null>(null)
+const selectedVisitType = ref<number | null>(null)
+const visitTypes = ref<VisitType[]>([])
 
-visitTypes.value = onMounted(fetchVisitTypes)
+onMounted(fetchVisitTypes)
 
 async function fetchVisitTypes() {
 	const { data } = await api.get('/visits/types')
@@ -80,7 +98,7 @@ const isCreateDisabled = computed(() => {
 	return result
 })
 
-const getVisitKey = (visit) => {
+const getVisitKey = (visit: any): string => {
 	// Create a unique key using sagsnr + adresse + postnr + first debtor name
 	return `${visit.sagsnr}-${visit.adresse}-${visit.postnr}-${visit.debtors[0]?.navn || ''}`
 }
@@ -91,7 +109,7 @@ const fetchAvailableVisits = async () => {
 	try {
 		const response = await api.get('/visits/AvailableVisit')
 
-		availableVisits.value = response.data.results.sort((a, b) => {
+		availableVisits.value = response.data.results.sort((a: any, b: any) => {
 			return Number(a.sagsnr) - Number(b.sagsnr)
 		})
 
@@ -117,7 +135,7 @@ const fetchAvailableVisits = async () => {
 			}
 		})
 		error.value = null
-	} catch (err) {
+	} catch (err: any) {
 		console.error(err)
 		errorApi.log('Error fetching available visits: ' + err.message)
 		error.value = 'Failed to fetch available visits'
@@ -126,10 +144,10 @@ const fetchAvailableVisits = async () => {
 	}
 }
 
-const handleSelectionChange = (selectedSagsnrs) => {
+const handleSelectionChange = (selectedSagsnrs: (number | string)[]) => {
 	selectedVisitsSagsnr.value = selectedSagsnrs
 }
-const handleSelectionIdsChange = (selectedIds) => {
+const handleSelectionIdsChange = (selectedIds: (number | string)[]) => {
 	selectedVisitIds.value = selectedIds
 }
 
@@ -169,7 +187,7 @@ const createVisits = async () => {
 		link.download =
 			'visits' +
 			new Date().toISOString().slice(0, 10).replace(/-/g, '') +
-			visitType.text +
+			(visitType?.text ?? '') +
 			'.xlsx'
 		document.body.appendChild(link)
 		link.click()
@@ -179,14 +197,14 @@ const createVisits = async () => {
 		if (dataTableRef.value) {
 			dataTableRef.value.clearSelection()
 		}
-	} catch (err) {
+	} catch (err: any) {
 		errorApi.log('Error creating visits: ' + err.message)
 		console.error('Failed to create visits:', err)
 		errorApi.logError(err)
 	}
 }
 
-function toggleDebtorSelection(visitKey, dIndex) {
+function toggleDebtorSelection(visitKey: string, dIndex: number) {
 	const current = selectedDebtors.value[visitKey] || []
 	if (current.includes(dIndex)) {
 		selectedDebtors.value[visitKey] = current.filter((idx) => idx !== dIndex)

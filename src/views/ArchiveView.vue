@@ -2,6 +2,6 @@
 	<ArchiveVisits />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import ArchiveVisits from '@/components/ArchiveVisits.vue'
 </script>

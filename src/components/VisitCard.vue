@@ -26,18 +26,28 @@
 	</tr>
 </template>
 
-<script setup>
-import router from '@/router'
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import BesogsbrevButton from './forms/BesogsbrevButton.vue'
 
-const props = defineProps({
-	visit: Object,
-	showExtra: {
-		type: Boolean,
-		default: false,
-	},
-})
+interface Visit {
+	ID: number
+	address: string
+	sagsnr: number | null
+	visit_date: string
+	visit_time: string | null
+	visit_interval: string | null
+	status_id: number
+	visit_response: unknown | null
+}
+
+const router = useRouter()
+
+const props = defineProps<{
+	visit: any
+	showExtra?: boolean
+}>()
 
 const copied = ref(false)
 

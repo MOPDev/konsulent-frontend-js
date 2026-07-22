@@ -7,10 +7,15 @@
 	</div>
 </template>
 
-<script setup>
-defineProps({
-	title: { type: String, required: true },
-	description: { type: String, default: '' },
-	debt: { type: Object, default: null },
+<script setup lang="ts">
+interface Props {
+	title: string
+	description?: string
+	debt?: any
+}
+
+withDefaults(defineProps<Props>(), {
+	description: '',
+	debt: null,
 })
 </script>

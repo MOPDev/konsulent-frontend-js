@@ -52,25 +52,46 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { visitsApi } from '@/api/visits'
 import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import DataTable from '@/components/DataTable.vue'
+import type { UserWithoutVisits } from '@/schemas'
 
-const selectedVisits = ref([])
-const selectedUser = ref('')
-const selectedDate = ref('')
-const selectedDebtors = ref({})
-const users = ref([]) // You'll need to fetch this
-const isPlanning = ref(false)
+interface Column {
+  key: string
+  label: string
+  sortable?: boolean
+  filterable?: boolean
+  copyable?: boolean
+}
+
+interface VisitData {
+  ID: number
+  sagsnr: number
+  address: string
+  advopro_klient?: string
+  type: { text: string }
+  debitors: Array<{ name: string }>
+  [key: string]: unknown
+}
+
+const router = useRouter()
+const selectedVisits = ref<(number | string)[]>([])
+const selectedUser = ref<string>('')
+const selectedDate = ref<string>('')
+const selectedDebtors = ref<Record<number, number[]>>({})
+const users = ref<UserWithoutVisits[]>([])
+const isPlanning = ref<boolean>(false)
 const authStore = useAuthStore()
-const plannedVisits = ref([])
-const error = ref()
+const plannedVisits = ref<VisitData[]>([])
+const error = ref<string | null>()
 
-const columns = [
+const columns: Column[] = [
 	{ key: 'sagsnr', label: 'Sags nummer', copyable: true, sortable: true, filterable: true },
 	{ key: 'klientnavn', label: 'Klient', sortable: true, filterable: true },
 	{ key: 'debitors', label: 'Debitorer', sortable: false, filterable: true },
@@ -79,14 +100,13 @@ const columns = [
 ]
 
 async function handleDeleteVisits() {
-	// first make sure user actually wants this
 	if (!confirm('Er du sikker på, at du vil slette de valgte besøg?')) {
 		return
 	}
 
 	if (!authStore.isAuthenticated) {
 		error.value = 'Du skal være logget ind'
-		authStore.toLoginScreen()
+		router.push('/login')
 		return
 	}
 
@@ -94,27 +114,24 @@ async function handleDeleteVisits() {
 		isPlanning.value = true
 		error.value = ''
 
-		const ops = selectedVisits.value.map((v) =>
-			visitsApi.delete(v),
-		)
+		const ops = selectedVisits.value.map((v) => visitsApi.delete(Number(v)))
 
 		const results = await Promise.allSettled(ops)
 
 		results.forEach((r, i) => {
 			if (r.status !== 'fulfilled') {
-				console.error('Failed to delete', selectedVisits.value[i].id, r.reason)
+				console.error('Failed to delete', selectedVisits.value[i], r.reason)
 				errorApi.log('Error deleting visit: ' + r.reason.message)
 			}
 		})
 
-		// Reset selections and refetch data
 		selectedVisits.value = []
 		selectedUser.value = ''
 		selectedDate.value = ''
 		await fetchCreatedVisits()
 
 		console.log('Planning successful')
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Planning failed:', err)
 		errorApi.log('Error deleting visits: ' + err.message)
 	} finally {
@@ -124,21 +141,22 @@ async function handleDeleteVisits() {
 
 const fetchCreatedVisits = async () => {
 	try {
-		plannedVisits.value = await visitsApi.getCreated()
+		const result = await visitsApi.getCreated()
+		plannedVisits.value = result
 
 		selectedDebtors.value = {}
-		plannedVisits.value.forEach((visit) => {
-			selectedDebtors.value[visit.ID] = visit.debitors.map((_, i) => i)
+		result.forEach((visit: any) => {
+			selectedDebtors.value[visit.ID] = visit.debitors.map((_: any, i: number) => i)
 		})
 
-		plannedVisits.value = plannedVisits.value.map((visit) => ({
+		plannedVisits.value = result.map((visit: any) => ({
 			...visit,
 			'type.text': visit.type.text,
 			klientnavn: String(visit.advopro_klient ?? ''),
 		}))
 
 		error.value = null
-	} catch (err) {
+	} catch (err: any) {
 		console.error(err)
 		error.value = 'Failed to fetch available visits'
 		plannedVisits.value = []
@@ -149,7 +167,7 @@ const fetchCreatedVisits = async () => {
 const handlePlanVisits = async () => {
 	if (!authStore.isAuthenticated) {
 		error.value = 'Du skal være logget ind'
-		authStore.toLoginScreen()
+		router.push('/login')
 		return
 	}
 
@@ -158,12 +176,12 @@ const handlePlanVisits = async () => {
 		error.value = ''
 
 		const planData = {
-			visitIds: selectedVisits.value,
+			visitIds: selectedVisits.value.map((v) => Number(v)),
 			userId: selectedUser.value,
 			date: selectedDate.value,
 		}
 		console.log(planData)
-		const blob = await visitsApi.generateVisitFile(planData)
+		const blob = (await visitsApi.generateVisitFile(planData)) as Blob
 		const url = window.URL.createObjectURL(blob)
 		const link = document.createElement('a')
 		link.href = url
@@ -173,14 +191,13 @@ const handlePlanVisits = async () => {
 		document.body.removeChild(link)
 		window.URL.revokeObjectURL(url)
 
-		// Reset selections and refetch data
 		selectedVisits.value = []
 		selectedUser.value = ''
 		selectedDate.value = ''
 		await fetchCreatedVisits()
 
-		console.log('Planning successful:', response.data)
-	} catch (err) {
+		console.log('Planning successful')
+	} catch (err: any) {
 		errorApi.log('Error planning visits: ' + err.message)
 		console.error('Planning failed:', err)
 		if (err.response?.status === 401) {
@@ -193,20 +210,20 @@ const handlePlanVisits = async () => {
 		isPlanning.value = false
 	}
 }
+
 const fetchUsers = async () => {
 	try {
 		users.value = await usersApi.getAll()
-	} catch (err) {
+	} catch (err: any) {
 		errorApi.logError(err)
 		console.error('Failed to fetch users:', err)
 	}
 }
 
-const handleSelectionChange = (selectedIds) => {
+const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisits.value = selectedIds
 }
 
-// Call fetchUsers on component mount
 fetchUsers()
 
 fetchCreatedVisits()

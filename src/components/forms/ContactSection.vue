@@ -162,23 +162,30 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 
-const props = defineProps({
-	formData: { type: Object, required: true },
-	showWorkerMet: { type: Boolean, default: false },
-	debitors: { type: Array, default: () => [] },
-})
+interface Debitor {
+	ID: number
+	name: string
+	phone?: string
+	phone_work?: string
+	email?: string
+}
 
-const fd = computed({
+const props = defineProps<{
+	formData: Record<string, unknown>
+	showWorkerMet: boolean
+	debitors: Debitor[]
+}>()
+
+const fd = computed<any>({
 	get: () => props.formData,
 	set: () => {},
 })
 
 const showletterDelivered = computed(() => {
-	// showWorkerMet means at at least one debitor is a company, so we only show the letter delivered question if no debitor, other, or worker was met
 	if (props.showWorkerMet) {
 		return (
 			fd.value.contact.debitor_met === false &&

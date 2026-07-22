@@ -1,38 +1,31 @@
 import { computed, type ComputedRef } from 'vue'
 
 interface VisitFormProps {
-  formData: Record<string, unknown>
-  visitData?: Record<string, unknown>
+  formData: any
+  visitData?: any
 }
 
 interface VisitFormEmits {
-  (e: 'update:formData', val: Record<string, unknown>): void
+  (e: 'update:formData', val: any): void
   (e: 'remove-image', index: number): void
 }
 
-interface DebitorWithAge {
-  age: number | string
-  birthday?: string
-  name?: string
-  [key: string]: unknown
-}
-
 interface FilteredVisitData {
-  debitors: DebitorWithAge[]
-  [key: string]: unknown
+  debitors: any[]
+  [key: string]: any
 }
 
 interface UseVisitFormReturn {
-  fd: ComputedRef<Record<string, unknown>>
+  fd: ComputedRef<any>
   filteredData: ComputedRef<FilteredVisitData>
   removeAt: (index: number) => void
-  onUpdateFiles: (next: unknown[]) => void
+  onUpdateFiles: (next: any[]) => void
 }
 
 export function useVisitForm(props: VisitFormProps, emit: VisitFormEmits): UseVisitFormReturn {
   const fd = computed({
     get: () => props.formData,
-    set: (v) => emit('update:formData', v),
+    set: (v: any) => emit('update:formData', v),
   })
 
   function calculateAge(birthday: string | undefined): number | string {
@@ -49,7 +42,7 @@ export function useVisitForm(props: VisitFormProps, emit: VisitFormEmits): UseVi
 
   const filteredData = computed<FilteredVisitData>(() => {
     const visit = props.visitData || {}
-    const debitors: DebitorWithAge[] = (visit.debitors as DebitorWithAge[] | undefined) || []
+    const debitors: any[] = (visit.debitors as any[] | undefined) || []
     return { ...visit, debitors: debitors.map((d) => ({ ...d, age: calculateAge(d.birthday) })) }
   })
 
@@ -57,7 +50,7 @@ export function useVisitForm(props: VisitFormProps, emit: VisitFormEmits): UseVi
     emit('remove-image', index)
   }
 
-  function onUpdateFiles(next: unknown[]) {
+  function onUpdateFiles(next: any[]) {
     emit('update:formData', { ...props.formData, images: next })
   }
 

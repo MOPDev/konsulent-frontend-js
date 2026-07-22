@@ -25,7 +25,7 @@
 				</div>
 
 				<div v-if="group.key !== 'other'" class="group-actions" @click.stop>
-					<button @click="downloadGroupExcel(group.key)" class="small-btn">
+					<button @click="downloadGroupExcel(Number(group.key))" class="small-btn">
 						Download Excel
 					</button>
 					<button @click="openDateModal(group)" class="small-btn">Ændre dato</button>
@@ -281,14 +281,47 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { visitsApi } from '@/api/visits'
 import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
+import type { UserWithoutVisits } from '@/schemas'
 
-const columns = [
+interface Column {
+  key: string
+  label: string
+  sortable?: boolean
+  filterable?: boolean
+  copyable?: boolean
+}
+
+interface VisitData {
+  ID: number
+  sagsnr: number
+  address: string
+  visit_date: string
+  visit_time?: string
+  visit_interval?: string
+  stop_nr: number
+  group_id?: number | null
+  status_id?: number
+  user_id?: number
+  konsulentName?: string
+  user?: { name: string }
+  debitors: Array<{ ID: number; name: string }>
+  type: { text: string }
+  [key: string]: unknown
+}
+
+interface VisitGroup {
+  key: string
+  visits: VisitData[]
+  date: string | null
+}
+
+const columns: Column[] = [
 	{ key: 'ID', label: 'Besøgs ID', sortable: true, filterable: true },
 	{ key: 'konsulentName', label: 'Konsulent', sortable: true, filterable: true },
 	{ key: 'sagsnr', label: 'Sags nummer', copyable: true, sortable: true, filterable: true },
@@ -300,41 +333,41 @@ const columns = [
 	{ key: 'group_id', label: 'Gruppe', sortable: true, filterable: true },
 ]
 
-const visits = ref([])
-const selectedVisitIds = ref([])
-const error = ref(null)
-const tableRefs = ref({})
-const users = ref([])
+const visits = ref<VisitData[]>([])
+const selectedVisitIds = ref<(number | string)[]>([])
+const error = ref<string | null>(null)
+const tableRefs = ref<Record<string, any>>({})
+const users = ref<UserWithoutVisits[]>([])
 
-const showDateModal = ref(false)
-const showKonsulentModal = ref(false)
-const showRemoveModal = ref(false)
-const showAddToGroupModal = ref(false)
-const selectedGroup = ref(null)
-const selectedVisit = ref(null)
-const newDate = ref('')
-const newUserId = ref('')
-const targetGroupId = ref(null)
+const showDateModal = ref<boolean>(false)
+const showKonsulentModal = ref<boolean>(false)
+const showRemoveModal = ref<boolean>(false)
+const showAddToGroupModal = ref<boolean>(false)
+const selectedGroup = ref<VisitGroup | null>(null)
+const selectedVisit = ref<VisitData | null>(null)
+const newDate = ref<string>('')
+const newUserId = ref<string>('')
+const targetGroupId = ref<number | null>(null)
 
-const expandedGroups = ref(new Set())
+const expandedGroups = ref<Set<string>>(new Set())
 
-const existingGroups = computed(() => {
+const existingGroups = computed<VisitGroup[]>(() => {
 	return groupedVisits.value.filter((g) => g.key !== 'other')
 })
 
-const setTableRef = (key, el) => {
+const setTableRef = (key: string, el: any) => {
 	if (el) tableRefs.value[key] = el
 }
 
-const groupedVisits = computed(() => {
-	const groups = {}
-	const other = []
+const groupedVisits = computed<VisitGroup[]>(() => {
+	const groups: Record<string, VisitGroup> = {}
+	const other: VisitData[] = []
 
 	visits.value.forEach((visit) => {
 		if (visit.group_id && visit.group_id !== 0) {
 			const key = String(visit.group_id)
 			if (!groups[key]) {
-				groups[key] = { key, visits: [] }
+				groups[key] = { key, visits: [], date: null }
 			}
 			groups[key].visits.push(visit)
 		} else {
@@ -344,11 +377,11 @@ const groupedVisits = computed(() => {
 
 	Object.values(groups).forEach((group) => {
 		group.visits.sort((a, b) => a.stop_nr - b.stop_nr)
-		group.date = group.visits[0]?.visit_date
+		group.date = group.visits[0]?.visit_date ?? null
 	})
 
 	const sortedGroups = Object.values(groups).sort((a, b) => {
-		return new Date(b.date) - new Date(a.date)
+		return new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime()
 	})
 
 	if (other.length > 0) {
@@ -367,14 +400,14 @@ onMounted(async () => {
 async function getPlannedVisits() {
 	try {
 		const konsulentGroups = await visitsApi.getPlanned()
-		visits.value = (konsulentGroups || []).flatMap((konsulent) =>
-			(konsulent.visits || []).map((visit) => ({
+		visits.value = (konsulentGroups || []).flatMap((konsulent: any) =>
+			(konsulent.visits || []).map((visit: any) => ({
 				...visit,
 				konsulentName: konsulent.name,
 			})),
 		)
 		error.value = null
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error fetching planned visits:', err)
 		error.value = 'Fejl ved hentning af planlagte besøg'
 		errorApi.logError(err)
@@ -384,28 +417,29 @@ async function getPlannedVisits() {
 async function getUsers() {
 	try {
 		users.value = await usersApi.getAll()
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error fetching users:', err)
 		errorApi.logError(err)
 	}
 }
 
-function formatAddress(address) {
+function formatAddress(address: string): string {
 	if (!address) return ''
 	return address.replace(/\r?\n/g, ', ')
 }
 
-function formatDate(date) {
+function formatDate(date: string | null | undefined): string {
 	if (!date) return ''
 	const d = new Date(date)
+	if (isNaN(d.getTime())) return ''
 	return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
 }
 
-const handleSelectionChange = (selectedIds) => {
+const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisitIds.value = selectedIds
 }
 
-async function downloadGroupExcel(groupId) {
+async function downloadGroupExcel(groupId: number) {
 	try {
 		const response = await visitsApi.downloadGroupExcel(groupId)
 		const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -416,14 +450,14 @@ async function downloadGroupExcel(groupId) {
 		link.click()
 		link.remove()
 		window.URL.revokeObjectURL(url)
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error downloading Excel:', err)
 		error.value = 'Fejl ved download af Excel'
 		errorApi.logError(err)
 	}
 }
 
-function openDateModal(group) {
+function openDateModal(group: VisitGroup) {
 	selectedGroup.value = group
 	if (group.date) {
 		const d = new Date(group.date)
@@ -441,19 +475,19 @@ async function submitDateChange() {
 	if (!newDate.value || !selectedGroup.value) return
 
 	try {
-		await visitsApi.changeGroupDate(selectedGroup.value.key, newDate.value)
+		await visitsApi.changeGroupDate(Number(selectedGroup.value.key), newDate.value)
 		closeDateModal()
 		await getPlannedVisits()
-	} catch (err) {
+	} catch (err: any) {
 		error.value = err.response?.data?.error || 'Fejl ved ændring af dato'
 		errorApi.logError(err)
 	}
 }
 
-function openKonsulentModal(group) {
+function openKonsulentModal(group: VisitGroup) {
 	selectedGroup.value = group
 	const firstVisit = group.visits[0]
-	newUserId.value = firstVisit?.user_id || ''
+	newUserId.value = String(firstVisit?.user_id ?? '')
 	showKonsulentModal.value = true
 }
 
@@ -466,16 +500,16 @@ async function submitKonsulentChange() {
 	if (!newUserId.value || !selectedGroup.value) return
 
 	try {
-		await visitsApi.changeGroupKonsulent(selectedGroup.value.key, parseInt(newUserId.value))
+		await visitsApi.changeGroupKonsulent(Number(selectedGroup.value.key), parseInt(newUserId.value))
 		closeKonsulentModal()
 		await getPlannedVisits()
-	} catch (err) {
+	} catch (err: any) {
 		error.value = err.response?.data?.error || 'Fejl ved ændring af konsulent'
 		errorApi.logError(err)
 	}
 }
 
-function openRemoveModal(visit) {
+function openRemoveModal(visit: any) {
 	selectedVisit.value = visit
 	showRemoveModal.value = true
 }
@@ -492,13 +526,13 @@ async function submitRemoveFromGroup() {
 		await visitsApi.moveVisitToGroup(selectedVisit.value.ID, null)
 		closeRemoveModal()
 		await getPlannedVisits()
-	} catch (err) {
+	} catch (err: any) {
 		error.value = err.response?.data?.error || 'Fejl ved fjernelse fra gruppe'
 		errorApi.logError(err)
 	}
 }
 
-function openAddToGroupModal(visit) {
+function openAddToGroupModal(visit: any) {
 	selectedVisit.value = visit
 	targetGroupId.value = null
 	showAddToGroupModal.value = true
@@ -514,10 +548,10 @@ async function submitAddToGroup() {
 	if (!selectedVisit.value) return
 
 	try {
-		await visitsApi.moveVisitToGroup(selectedVisit.value.ID, Number(targetGroupId.value))
+		await visitsApi.moveVisitToGroup(selectedVisit.value.ID, targetGroupId.value)
 		closeAddToGroupModal()
 		await getPlannedVisits()
-	} catch (err) {
+	} catch (err: any) {
 		error.value = err.response?.data?.error || 'Fejl ved tilføjelse til gruppe'
 		errorApi.logError(err)
 	}
@@ -529,12 +563,12 @@ async function handleSendLetter() {
 	error.value = null
 	try {
 		const ops = selectedVisitIds.value.map((id) =>
-			visitsApi.sendLetter(id),
+			visitsApi.sendLetter(Number(id)),
 		)
 		const results = await Promise.allSettled(ops)
 
 		let hasErrors = false
-		results.forEach((r, i) => {
+		results.forEach((r: PromiseSettledResult<any>, i: number) => {
 			if (r.status !== 'fulfilled') {
 				console.error(`Failed to send letter for ${selectedVisitIds.value[i]}:`, r.reason)
 				hasErrors = true
@@ -546,9 +580,9 @@ async function handleSendLetter() {
 		}
 
 		selectedVisitIds.value = []
-		Object.values(tableRefs.value).forEach((table) => table?.clearSelection())
+		Object.values(tableRefs.value).forEach((table: any) => table?.clearSelection())
 		await getPlannedVisits()
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error sending letters:', err)
 		error.value = 'Fejl ved afsendelse af breve'
 		errorApi.logError(err)
@@ -565,33 +599,32 @@ async function handleDeleteVisits() {
 	error.value = null
 	try {
 		const ops = selectedVisitIds.value.map((id) =>
-			visitsApi.delete(id),
+			visitsApi.delete(Number(id)),
 		)
 		const results = await Promise.allSettled(ops)
 
-		results.forEach((r, i) => {
+		results.forEach((r: PromiseSettledResult<any>, i: number) => {
 			if (r.status !== 'fulfilled') {
 				console.error(`Failed to delete ${selectedVisitIds.value[i]}:`, r.reason)
 			}
 		})
 
 		selectedVisitIds.value = []
-		Object.values(tableRefs.value).forEach((table) => table?.clearSelection())
+		Object.values(tableRefs.value).forEach((table: any) => table?.clearSelection())
 		await getPlannedVisits()
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error deleting visits:', err)
 		error.value = 'Fejl ved sletning af besøg'
 		errorApi.logError(err)
 	}
 }
 
-function toggleGroup(key) {
+function toggleGroup(key: string) {
 	if (expandedGroups.value.has(key)) {
 		expandedGroups.value.delete(key)
 	} else {
 		expandedGroups.value.add(key)
 	}
-	// Force reactivity since Set mutations aren't tracked
 	expandedGroups.value = new Set(expandedGroups.value)
 }
 </script>

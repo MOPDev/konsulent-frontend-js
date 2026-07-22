@@ -45,45 +45,66 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 
-const props = defineProps({
-	id: { type: String, default: '' },
-	title: { type: String, default: 'Vælg filer' },
-	hint: { type: String, default: 'Tryk for at vælge (flere tilladt)' },
-	icon: { type: String, default: '📷' },
-	accept: { type: String, default: 'image/*' },
-	capture: { type: [String, Boolean], default: undefined },
-	disabled: { type: Boolean, default: false },
+export interface FilePreview {
+	file: File
+	name: string
+	preview: string
+}
 
-	/* New: control preview behavior */
-	showCount: { type: Boolean, default: true },
-	showThumbnails: { type: Boolean, default: true },
-	maxPreviews: { type: Number, default: 4 },
+interface Props {
+	id?: string
+	title?: string
+	hint?: string
+	icon?: string
+	accept?: string
+	capture?: boolean | 'user' | 'environment'
+	disabled?: boolean
+	showCount?: boolean
+	showThumbnails?: boolean
+	maxPreviews?: number
+	files?: FilePreview[]
+	multiple?: boolean
+	appendMode?: boolean
+	maxFiles?: number
+}
 
-	/* Optional: bind files from parent to reflect its state */
-	files: { type: Array, default: () => [] },
-
-	multiple: { type: Boolean, default: false }, // single pick per tap
-	appendMode: { type: Boolean, default: true }, // append instead of replace
-	maxFiles: { type: Number, default: 10 },
+const props = withDefaults(defineProps<Props>(), {
+	id: '',
+	title: 'Vælg filer',
+	hint: 'Tryk for at vælge (flere tilladt)',
+	icon: '📷',
+	accept: 'image/*',
+	capture: undefined,
+	disabled: false,
+	showCount: true,
+	showThumbnails: true,
+	maxPreviews: 4,
+	files: () => [],
+	multiple: false,
+	appendMode: true,
+	maxFiles: 10,
 })
 
-const emit = defineEmits(['images', 'change', 'input-cleared', 'update:files'])
+const emit = defineEmits<{
+	(e: 'images', value: Event): void
+	(e: 'change', value: Event): void
+	(e: 'remove', index: number): void
+	(e: 'input-cleared'): void
+	(e: 'update:files', value: FilePreview[]): void
+}>()
 
-const inputEl = ref(null)
+const inputEl = ref<HTMLInputElement | null>(null)
 const rnd = Math.random().toString(36).slice(2)
 const inputId = computed(() => props.id || `file-${rnd}`)
 
-/* Local previews when parent doesn't pass files */
-const filesLocal = ref([])
+const filesLocal = ref<FilePreview[]>([])
 
-/* Unify source of truth for rendering */
 const filesToShow = computed(() => (props.files?.length ? props.files : filesLocal.value))
 
-function buildPreviews(fileList) {
-	// Create objects with preview URLs (don’t persist non-images)
+function buildPreviews(fileList: FileList | null): FilePreview[] {
 	const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 	const arr = Array.from(fileList || []).filter(
 		(f) => !allowed.length || allowed.includes(f.type),
@@ -95,7 +116,7 @@ function buildPreviews(fileList) {
 	}))
 }
 
-function revokeAll(urls) {
+function revokeAll(urls: string[]) {
 	urls.forEach((u) => {
 		try {
 			URL.revokeObjectURL(u)
@@ -105,21 +126,19 @@ function revokeAll(urls) {
 	})
 }
 
-let lastLocalUrls = []
+let lastLocalUrls: string[] = []
 
-function onChange(e) {
+function onChange(e: Event) {
 	emit('images', e)
 	emit('change', e)
 
-	const picked = buildPreviews(e.target.files)
+	const target = e.target as HTMLInputElement
+	const picked = buildPreviews(target.files)
 	const current = props.files?.length ? props.files : filesLocal.value
 	let next = props.appendMode ? [...current, ...picked] : picked
-	// enforce maxFiles
 	if (props.maxFiles && next.length > props.maxFiles) next = next.slice(0, props.maxFiles)
 
-	// local fallback
 	if (!props.files?.length) {
-		// revoke old locals ONLY if replacing
 		if (!props.appendMode) revokeAll(lastLocalUrls)
 		filesLocal.value = next
 		lastLocalUrls = next.map((p) => p.preview)
@@ -127,27 +146,21 @@ function onChange(e) {
 
 	emit('update:files', next)
 
-	// allow selecting same file again
 	if (inputEl.value) inputEl.value.value = ''
 }
 
 function clear() {
 	if (inputEl.value) inputEl.value.value = ''
-	// Clear local previews
 	revokeAll(lastLocalUrls)
 	filesLocal.value = []
 	lastLocalUrls = []
 	emit('input-cleared')
 }
 
-// end of clear
-
-/* If parent-controlled files change, clean up old local URLs (we don’t own parent URLs) */
 watch(
 	() => props.files,
-	(nv, ov) => {
+	(nv: FilePreview[] | undefined, ov: FilePreview[] | undefined) => {
 		if (!ov || ov === nv) return
-		// When switching from local to parent-controlled, drop local URLs
 		if (lastLocalUrls.length && props.files?.length) {
 			revokeAll(lastLocalUrls)
 			filesLocal.value = []

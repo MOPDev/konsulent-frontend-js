@@ -50,20 +50,20 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { usersApi } from '@/api/users'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
 import { USER_RIGHTS } from '@/stores/auth'
 
-const username = ref('')
-const initials = ref('')
-const fullName = ref('')
-const rights = ref(USER_RIGHTS.OFFICE) // sensible default
-const password = ref('')
-const message = ref('')
-const messageError = ref(false)
+const username = ref<string>('')
+const initials = ref<string>('')
+const fullName = ref<string>('')
+const rights = ref<string>(USER_RIGHTS.OFFICE)
+const password = ref<string>('')
+const message = ref<string>('')
+const messageError = ref<boolean>(false)
 
 const ROLE_OPTIONS = [
 	{ value: USER_RIGHTS.OFFICE, label: 'Kontor' },
@@ -72,18 +72,13 @@ const ROLE_OPTIONS = [
 	{ value: USER_RIGHTS.DEVELOPER, label: 'Dev' },
 ]
 
-// functin to test penneo integration - can be removed later
-//		apiv1.POST("/penneo/start", api.StartPenneoFlow)
-//		apiv1.POST("/penneo/webhook", api.PenneoWebhook)
-//		apiv1.GET("/penneo/events/:caseFileId", api.PenneoSSE)
-
 const testPenneoIntegration = async () => {
 	try {
 		const response = await api.post('/penneo/start')
 		message.value = 'Penneo integration test successful: ' + response.data.message
 		messageError.value = false
 		console.log('Penneo integration test response:', response)
-	} catch (error) {
+	} catch (error: any) {
 		console.error('Penneo integration test error:', error)
 		message.value =
 			'Penneo integration test failed: ' + (error.response?.data?.error || error.message)
@@ -91,10 +86,10 @@ const testPenneoIntegration = async () => {
 	}
 }
 
-const generatePassword = () => {
+const generatePassword = (): string => {
 	const bytes = crypto.getRandomValues(new Uint8Array(9))
 	return Array.from(bytes)
-		.map((b) => b.toString(36))
+		.map((b: number) => b.toString(36))
 		.join('')
 		.slice(0, 12)
 }
@@ -105,7 +100,7 @@ const createUser = async () => {
 		messageError.value = true
 		return
 	}
-	if (!Object.values(USER_RIGHTS).includes(rights.value)) {
+	if (!Object.values(USER_RIGHTS).includes(rights.value as typeof USER_RIGHTS[keyof typeof USER_RIGHTS])) {
 		message.value = 'Ugyldig rolle valgt.'
 		messageError.value = true
 		return
@@ -130,7 +125,7 @@ const createUser = async () => {
 		fullName.value = ''
 		initials.value = ''
 		rights.value = USER_RIGHTS.OFFICE
-	} catch (error) {
+	} catch (error: any) {
 		message.value =
 			'Fejl ved oprettelse af bruger: ' + (error.response?.data?.error || error.message)
 		messageError.value = true

@@ -3,7 +3,7 @@
 	<div class="auditor-view">
 		<h2>Konsulent Info</h2>
 		<p class="auditor-name" @click="toggleExpanded">Konsulent: {{ auditor?.name }}</p>
-		<div v-if="expanded" class="auditor-details">
+		<div v-if="expanded && auditor" class="auditor-details">
 			<p>telefonnr: {{ auditor.phone }}</p>
 			<p>Mail: {{ auditor.email }}</p>
 			<p>id: {{ ID }}</p>
@@ -15,49 +15,40 @@
 	</div>
 </template>
 
-<script setup>
-/**
- * @typedef {Object} Visit
- * @property {number} user_id
- * @property {string} address
- * @property {string} DebitorName
- * @property {string} DebitorPhone
- * @property {string} latitude
- * @property {string} longitude
- * @property {string} notes
- * @property {number} sagsnr
- * @property {string} visit_date
- * @property {string} visit_time
- * @property {string} visit_interval
- * @property {boolean} visited
- */
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import api from '@/utils/axios.js'
+import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
 
 import AuditorInformation from '@/components/AuditorInformation.vue'
 
+interface Auditor {
+  ID: number
+  name: string
+  phone: string
+  email: string
+  [key: string]: unknown
+}
+
 const route = useRoute()
 
-const auditor = ref()
+const auditor = ref<Auditor | null>(null)
 
-// Get the id from the route parameters
 const ID = Number(route.params.id)
 
-const expanded = ref(false)
+const expanded = ref<boolean>(false)
 function toggleExpanded() {
 	expanded.value = !expanded.value
 }
 
 api.get('/visit-response/all')
 	.then((response) => {
-		auditor.value = response.data.users.find((user) => user.ID === ID)
+		auditor.value = response.data.users.find((user: Auditor) => user.ID === ID) ?? null
 	})
-	.catch((error) => {
+	.catch((error: any) => {
 		console.error('Error fetching auditor data:', error)
 		errorApi.log('Error fetching auditor data: ' + error.message)
-		// Fallback to mock data if API call fails
 	})
 </script>
 

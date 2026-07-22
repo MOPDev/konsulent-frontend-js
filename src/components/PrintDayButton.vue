@@ -6,21 +6,21 @@
 	<p v-if="error" class="error">{{ error }}</p>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { ref, computed, type ComputedRef } from 'vue'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
 
-const props = defineProps({
-	visitIds: { type: Array, required: true },
-})
+const props = defineProps<{
+	visitIds: number[]
+}>()
 
 const loading = ref(false)
-const error = ref(null)
+const error = ref<string | null>(null)
 const elapsed = ref(0)
 
 // ponytail: 1.5s per visit is a rough guess for docx→pdf; tune if conversions are faster
-const estimated = computed(() =>
+const estimated: ComputedRef<number> = computed(() =>
 	Math.max(0, Math.ceil(props.visitIds.length * 1.5 - elapsed.value)),
 )
 

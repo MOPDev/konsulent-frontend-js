@@ -39,9 +39,9 @@
 	</main>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { computed } from 'vue'
+import { computed, type ComputedRef } from 'vue'
 import {
 	BNavbar,
 	BNavbarBrand,
@@ -54,11 +54,11 @@ import {
 	BCollapse,
 } from 'bootstrap-vue-next'
 
-import { useAuthStore } from '@/stores/auth.js'
+import { useAuthStore } from '@/stores/auth'
 import logo from '@/assets/DAI-logo.png'
 
 const authStore = useAuthStore()
-const isAdminOrDeveloper = computed(
+const isAdminOrDeveloper: ComputedRef<boolean> = computed(
 	() => authStore.userRights === 'admin' || authStore.userRights === 'developer',
 )
 </script>

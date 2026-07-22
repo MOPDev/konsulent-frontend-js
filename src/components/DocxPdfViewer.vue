@@ -43,38 +43,38 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-const props = defineProps({
-	docBlob: { type: Blob, default: null },
-	height: { type: String, default: '600px' },
-})
+const props = defineProps<{
+  docBlob: Blob | null
+  height?: string
+}>()
 
-const canvasWrapper = ref(null)
-const totalPages = ref(0)
-const scale = ref(1.2)
-const isFullscreen = ref(false)
+const canvasWrapper = ref<HTMLElement | null>(null)
+const totalPages = ref<number>(0)
+const scale = ref<number>(1.2)
+const isFullscreen = ref<boolean>(false)
 
 // page -> canvas element maps
-const canvasMap = {}
-const canvasMapFullscreen = {}
+const canvasMap: Record<number, HTMLCanvasElement> = {}
+const canvasMapFullscreen: Record<number, HTMLCanvasElement> = {}
 
-let pdfDoc = null
-let objectUrl = null
+let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null
+let objectUrl: string | null = null
 
-function setCanvas(el, n) {
-	if (el) canvasMap[n] = el
+function setCanvas(el: any, n: number): void {
+	if (el) canvasMap[n] = el as HTMLCanvasElement
 }
-function setCanvasFullscreen(el, n) {
-	if (el) canvasMapFullscreen[n] = el
+function setCanvasFullscreen(el: any, n: number): void {
+	if (el) canvasMapFullscreen[n] = el as HTMLCanvasElement
 }
 
-async function loadPdf(blob) {
+async function loadPdf(blob: Blob): Promise<void> {
 	if (objectUrl) URL.revokeObjectURL(objectUrl)
 	objectUrl = URL.createObjectURL(blob)
 	const arrayBuffer = await blob.arrayBuffer()
@@ -84,14 +84,14 @@ async function loadPdf(blob) {
 	renderAllPages()
 }
 
-async function renderAllPages(fullscreen = false) {
+async function renderAllPages(fullscreen = false): Promise<void> {
 	if (!pdfDoc) return
 	await Promise.all(
 		Array.from({ length: totalPages.value }, (_, i) => renderPage(i + 1, fullscreen)),
 	)
 }
 
-async function renderPage(num, fullscreen = false) {
+async function renderPage(num: number, fullscreen = false): Promise<void> {
 	if (!pdfDoc) return
 	const page = await pdfDoc.getPage(num)
 	const viewport = page.getViewport({ scale: scale.value })
@@ -100,21 +100,23 @@ async function renderPage(num, fullscreen = false) {
 	if (!canvas) return
 	canvas.height = viewport.height
 	canvas.width = viewport.width
-	await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
+	const ctx = canvas.getContext('2d')
+	if (!ctx) return
+	await page.render({ canvas: canvas, canvasContext: ctx, viewport }).promise
 }
 
-function zoomIn() {
+function zoomIn(): void {
 	scale.value = +(scale.value + 0.2).toFixed(1)
 	renderAllPages(false)
 	if (isFullscreen.value) renderAllPages(true)
 }
-function zoomOut() {
+function zoomOut(): void {
 	scale.value = Math.max(0.4, +(scale.value - 0.2).toFixed(1))
 	renderAllPages(false)
 	if (isFullscreen.value) renderAllPages(true)
 }
 
-async function closeFullscreen() {
+async function closeFullscreen(): Promise<void> {
 	isFullscreen.value = false
 }
 
@@ -125,7 +127,7 @@ watch(isFullscreen, async (val) => {
 	}
 })
 
-function onKeydown(e) {
+function onKeydown(e: KeyboardEvent): void {
 	if (e.key === 'Escape') closeFullscreen()
 }
 window.addEventListener('keydown', onKeydown)
@@ -133,8 +135,10 @@ window.addEventListener('keydown', onKeydown)
 function print() {
 	// print all pages from normal canvases
 	const win = window.open('')
-	const imgs = Object.keys(canvasMap)
-		.sort((a, b) => a - b)
+	if (!win) return
+	const keys = Object.keys(canvasMap).map(Number)
+	keys.sort((a, b) => a - b)
+	const imgs = keys
 		.map(
 			(n) =>
 				`<img src="${canvasMap[n].toDataURL()}" style="display:block;margin-bottom:8px" />`,

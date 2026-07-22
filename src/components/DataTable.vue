@@ -43,7 +43,7 @@
 						<input
 							type="checkbox"
 							:checked="isSelected(item)"
-							@change="toggleSelection(item, $event.target.checked)"
+							@change="toggleSelection(item, ($event.target as HTMLInputElement).checked)"
 						/>
 					</td>
 					<td
@@ -85,41 +85,62 @@
 	</div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, withDefaults } from 'vue'
 
-const props = defineProps({
-	data: { type: Array, required: true },
-	columns: { type: Array, required: true },
-	selectable: { type: Boolean, default: false },
-	filterable: { type: Boolean, default: false },
-	paginated: { type: Boolean, default: false },
-	pageSize: { type: Number, default: 10 },
-	modelValue: { type: Array, default: () => [] },
+interface Column {
+  key: string
+  label: string
+  sortable?: boolean
+  filterable?: boolean
+  copyable?: boolean
+}
+
+interface DataItem {
+  ID?: number
+  sagsnr?: number | string
+  index?: number
+  [key: string]: any
+}
+
+const props = withDefaults(defineProps<{
+  data: DataItem[]
+  columns: Column[]
+  selectable?: boolean
+  filterable?: boolean
+  paginated?: boolean
+  pageSize?: number
+  modelValue?: (number | string)[]
+}>(), {
+  selectable: false,
+  filterable: false,
+  paginated: false,
+  pageSize: 20,
 })
 
-const emit = defineEmits([
-	'selection-changed',
-	'selection-ids-changed',
-	'update:selectedItems',
-	'update:selectedVisitIds',
-])
+const emit = defineEmits<{
+  (e: 'selection-changed', items: number[]): void
+  (e: 'selection-ids-changed', ids: (number | string)[]): void
+  (e: 'update:selectedItems', items: number[]): void
+  (e: 'update:selectedVisitIds', ids: (number | string)[]): void
+  (e: 'update:modelValue', val: (number | string)[]): void
+}>()
 
 // ─── Copy state ───────────────────────────────────────────────────────────────
 // Key format: "columnKey::rowIndex" — lets multiple cells show feedback at once
-const copiedCells = ref(new Set())
+const copiedCells = ref<Set<string>>(new Set())
 
-function getCellKey(columnKey, item, index) {
+function getCellKey(columnKey: string, item: DataItem, index: number): string {
 	// Use item ID when available for stability across re-renders
 	const rowId = item.ID ?? `${item.sagsnr}-${index}`
 	return `${columnKey}::${rowId}`
 }
 
-function isCopied(columnKey, item, index) {
+function isCopied(columnKey: string, item: DataItem, index: number): boolean {
 	return copiedCells.value.has(getCellKey(columnKey, item, index))
 }
 
-async function copyValue(columnKey, item, index) {
+async function copyValue(columnKey: string, item: DataItem, index: number): Promise<void> {
 	const value = getNestedValue(item, columnKey)
 	if (value == null) return
 
@@ -140,8 +161,8 @@ async function copyValue(columnKey, item, index) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-const selectedItems = ref([])
-const selectedVisitIds = ref([])
+const selectedItems = ref<number[]>([])
+const selectedVisitIds = ref<(number | string)[]>([])
 
 watch(
 	() => props.modelValue,
@@ -159,14 +180,14 @@ const clearSelection = () => {
 
 defineExpose({ clearSelection })
 
-const sortKey = ref('')
-const sortOrder = ref('asc')
-const filters = ref({})
-const currentPage = ref(1)
+const sortKey = ref<string>('')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+const filters = ref<Record<string, string>>({})
+const currentPage = ref<number>(1)
 
-const filterableColumns = computed(() => props.columns.filter((col) => col.filterable))
+const filterableColumns = computed<Column[]>(() => props.columns.filter((col) => col.filterable))
 
-const filteredData = computed(() => {
+const filteredData = computed<DataItem[]>(() => {
 	let result = [...props.data]
 
 	Object.entries(filters.value).forEach(([key, value]) => {
@@ -198,22 +219,22 @@ const filteredData = computed(() => {
 	return result
 })
 
-const totalPages = computed(() => Math.ceil(filteredData.value.length / props.pageSize))
+const totalPages = computed<number>(() => Math.ceil(filteredData.value.length / props.pageSize))
 
-const paginatedData = computed(() => {
+const paginatedData = computed<DataItem[]>(() => {
 	if (!props.paginated) return filteredData.value
 	const start = (currentPage.value - 1) * props.pageSize
 	return filteredData.value.slice(start, start + props.pageSize)
 })
 
-const isSelectAll = computed(() => {
+const isSelectAll = computed<boolean>(() => {
 	const rows = filteredData.value
 	if (!rows.length) return false
-	const idsOnView = rows.map((r) => r.ID)
+	const idsOnView = rows.map((r) => r.ID).filter(Boolean) as (number | string)[]
 	return idsOnView.every((id) => selectedVisitIds.value.includes(id))
 })
 
-const sort = (key) => {
+const sort = (key: string): void => {
 	const column = props.columns.find((col) => col.key === key)
 	if (!column?.sortable) return
 
@@ -225,37 +246,37 @@ const sort = (key) => {
 	}
 }
 
-const selectAll = (event) => {
-	const checked = event.target.checked
+const selectAll = (event: Event): void => {
+	const checked = (event.target as HTMLInputElement).checked
 	const rows = filteredData.value
 
-	let idsOnView
+	let idsOnView: (number | string)[]
 	if (rows[0].ID === undefined) {
 		idsOnView = rows.map((r) => String(r.sagsnr) + String(r.index))
 	} else {
-		idsOnView = rows.map((r) => r.ID)
+		idsOnView = rows.map((r) => r.ID).filter((id): id is number => id !== undefined)
 	}
 
 	if (checked) {
-		const idSet = new Set(selectedVisitIds.value.concat(idsOnView))
+		const idSet = new Set<(number | string)>(selectedVisitIds.value.concat(idsOnView))
 		selectedVisitIds.value = Array.from(idSet)
 		const viewIdx = rows.map((_, i) => i)
-		const idxSet = new Set(selectedItems.value.concat(viewIdx))
+		const idxSet = new Set<number>(selectedItems.value.concat(viewIdx))
 		selectedItems.value = Array.from(idxSet)
 	} else {
-		const idsToRemove = new Set(idsOnView)
+		const idsToRemove = new Set<(number | string)>(idsOnView)
 		selectedVisitIds.value = selectedVisitIds.value.filter((id) => !idsToRemove.has(id))
 		const viewIdx = new Set(rows.map((_, i) => i))
 		selectedItems.value = selectedItems.value.filter((i) => !viewIdx.has(i))
 	}
 }
 
-function isSelected(item) {
+function isSelected(item: DataItem): boolean {
 	const id = item.ID === undefined ? String(item.sagsnr) + String(item.index) : item.ID
 	return selectedVisitIds.value.includes(id)
 }
 
-function toggleSelection(item, checked) {
+function toggleSelection(item: DataItem, checked: boolean): void {
 	const id = item.ID === undefined ? String(item.sagsnr) + String(item.index) : item.ID
 	const idx = paginatedData.value.findIndex((x) => x.ID === id)
 
@@ -293,8 +314,8 @@ watch(
 	{ deep: true },
 )
 
-const getNestedValue = (obj, path) => {
-	return path.split('.').reduce((current, key) => current?.[key], obj)
+const getNestedValue = (obj: Record<string, any>, path: string): any => {
+	return path.split('.').reduce((current: any, key: string) => current?.[key], obj)
 }
 </script>
 

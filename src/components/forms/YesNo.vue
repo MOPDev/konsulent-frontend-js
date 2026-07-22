@@ -21,23 +21,32 @@
 	</fieldset>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps({
-	label: { type: String, required: true },
-	name: { type: String, required: true }, // must be unique per question
-	modelValue: { type: [Boolean, null], default: null }, // allow null until user chooses
-	required: { type: Boolean, default: false },
-	disabled: { type: Boolean, default: false },
-	hint: { type: String, default: '' },
+interface Props {
+	label: string
+	name: string
+	modelValue?: boolean | null
+	required?: boolean
+	disabled?: boolean
+	hint?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	modelValue: null,
+	required: false,
+	disabled: false,
+	hint: '',
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+	(e: 'update:modelValue', value: boolean | null): void
+}>()
 
 const val = computed({
 	get: () => props.modelValue,
-	set: (v) => emit('update:modelValue', v),
+	set: (v: boolean | null) => emit('update:modelValue', v),
 })
 
 const options = [
