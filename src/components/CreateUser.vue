@@ -54,7 +54,6 @@
 import { ref } from 'vue'
 import { usersApi } from '@/api/users'
 import api from '@/utils/axios'
-import { errorApi } from '@/utils/axios'
 import { USER_RIGHTS } from '@/stores/auth'
 
 const username = ref<string>('')

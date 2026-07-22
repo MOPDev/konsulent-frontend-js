@@ -113,7 +113,7 @@
 import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 import { ref, onMounted } from 'vue'
-import { useAuthStore, USER_RIGHTS, type AuthUser } from '@/stores/auth'
+import { useAuthStore, USER_RIGHTS } from '@/stores/auth'
 
 interface UserData {
 	ID: number

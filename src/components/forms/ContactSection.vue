@@ -125,9 +125,14 @@
 					:key="d.ID"
 					type="button"
 					class="btn-badge me-1"
-					@click="fd.contact.corrected_tlf = d.phone || d.phone_work"
+					@click="
+						fd.contact.corrected_tlf = String(d.phone || d.phone_work || '').replace(
+							/\.0$/,
+							'',
+						)
+					"
 				>
-					Brug: {{ d.phone || d.phone_work }}
+					Brug: {{ String(d.phone || d.phone_work || '').replace(/\.0$/, '') }}
 				</button>
 			</div>
 			<input
@@ -208,7 +213,7 @@ const emailDebitors = computed(() => {
 const phonePlaceholder = computed(() => {
 	const first = phoneDebitors.value[0]
 	if (first) {
-		return `Nuværende: ${first.phone || first.phone_work}`
+		return `Nuværende: ${String(first.phone || first.phone_work || '').replace(/\.0$/, '')}`
 	}
 	return 'Nyt/rettet tlf. nummer'
 })

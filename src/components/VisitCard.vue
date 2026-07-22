@@ -31,17 +31,6 @@ import { useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import BesogsbrevButton from './forms/BesogsbrevButton.vue'
 
-interface Visit {
-	ID: number
-	address: string
-	sagsnr: number | null
-	visit_date: string
-	visit_time: string | null
-	visit_interval: string | null
-	status_id: number
-	visit_response: unknown | null
-}
-
 const router = useRouter()
 
 const props = defineProps<{

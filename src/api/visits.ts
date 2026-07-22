@@ -2,7 +2,6 @@ import { client } from './client'
 import {
   VisitWithoutUserOrDebitorsSchema,
   DebitorWithoutVisitsSchema,
-  VisitResponseSchema,
 } from '@/schemas'
 import { z } from 'zod'
 
