@@ -60,6 +60,15 @@ function getTodayString() {
 	return `${yyyy}-${mm}-${dd}`
 }
 
+function getWeekEndString() {
+	const end = new Date()
+	end.setDate(end.getDate() + 7)
+	const yyyy = end.getFullYear()
+	const mm = String(end.getMonth() + 1).padStart(2, '0')
+	const dd = String(end.getDate()).padStart(2, '0')
+	return `${yyyy}-${mm}-${dd}`
+}
+
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 
@@ -78,9 +87,10 @@ const visibleVisits = computed(() => {
 		return allVisits
 	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
 		const todayString = getTodayString()
+		const weekEndString = getWeekEndString()
 		return allVisits.filter((visit) => {
 			const visitDay = visit.visit_date?.slice(0, 10)
-			return new Date(visitDay) >= new Date(todayString) && visit.status_id === 3
+			return visitDay >= todayString && visitDay <= weekEndString && visit.status_id === 3
 		})
 	} else {
 		console.error('Unknown user role:', role)
