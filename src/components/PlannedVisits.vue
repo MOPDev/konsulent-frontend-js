@@ -290,35 +290,35 @@ import DataTable from './DataTable.vue'
 import type { UserWithoutVisits } from '@/schemas'
 
 interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  filterable?: boolean
-  copyable?: boolean
+	key: string
+	label: string
+	sortable?: boolean
+	filterable?: boolean
+	copyable?: boolean
 }
 
 interface VisitData {
-  ID: number
-  sagsnr: number
-  address: string
-  visit_date: string
-  visit_time?: string
-  visit_interval?: string
-  stop_nr: number
-  group_id?: number | null
-  status_id?: number
-  user_id?: number
-  konsulentName?: string
-  user?: { name: string }
-  debitors: Array<{ ID: number; name: string }>
-  type: { text: string }
-  [key: string]: unknown
+	ID: number
+	sagsnr: number
+	address: string
+	visit_date: string
+	visit_time?: string
+	visit_interval?: string
+	stop_nr: number
+	group_id?: number | null
+	status_id?: number
+	user_id?: number
+	konsulentName?: string
+	user?: { name: string }
+	debitors: Array<{ ID: number; name: string }>
+	type: { text: string }
+	[key: string]: unknown
 }
 
 interface VisitGroup {
-  key: string
-  visits: VisitData[]
-  date: string | null
+	key: string
+	visits: VisitData[]
+	date: string | null
 }
 
 const columns: Column[] = [
@@ -500,7 +500,10 @@ async function submitKonsulentChange() {
 	if (!newUserId.value || !selectedGroup.value) return
 
 	try {
-		await visitsApi.changeGroupKonsulent(Number(selectedGroup.value.key), parseInt(newUserId.value))
+		await visitsApi.changeGroupKonsulent(
+			Number(selectedGroup.value.key),
+			parseInt(newUserId.value),
+		)
 		closeKonsulentModal()
 		await getPlannedVisits()
 	} catch (err: any) {
@@ -562,9 +565,7 @@ async function handleSendLetter() {
 
 	error.value = null
 	try {
-		const ops = selectedVisitIds.value.map((id) =>
-			visitsApi.sendLetter(Number(id)),
-		)
+		const ops = selectedVisitIds.value.map((id) => visitsApi.sendLetter(Number(id)))
 		const results = await Promise.allSettled(ops)
 
 		let hasErrors = false
@@ -598,9 +599,7 @@ async function handleDeleteVisits() {
 
 	error.value = null
 	try {
-		const ops = selectedVisitIds.value.map((id) =>
-			visitsApi.delete(Number(id)),
-		)
+		const ops = selectedVisitIds.value.map((id) => visitsApi.delete(Number(id)))
 		const results = await Promise.allSettled(ops)
 
 		results.forEach((r: PromiseSettledResult<any>, i: number) => {

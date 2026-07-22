@@ -73,6 +73,7 @@ const quickFills: QuickFill[] = [
 	{ tag: 'efterladte køretøjer', field: 'abandoned_vehicles' },
 	{ tag: 'overfyldt affald', field: 'trash_overflown' },
 	{ tag: 'til salg-skilt', field: 'forsale_sign' },
+	{ tag: 'Pænt vedligeholdt', field: 'well_maintained' },
 ]
 
 function splitNote(note: string): string[] {
