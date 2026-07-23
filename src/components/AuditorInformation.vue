@@ -109,7 +109,7 @@ const visibleVisits = computed<VisitItem[]>(() => {
 			return (
 				visitDay >= todayString &&
 				visitDay <= weekEndString &&
-				visit.status_id in [2, 3, 4, 6]
+				[2, 3, 4, 6].includes(visit.status_id)
 			)
 		})
 	} else {
