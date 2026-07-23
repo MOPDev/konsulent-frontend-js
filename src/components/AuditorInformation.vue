@@ -79,31 +79,35 @@ const isPrivileged = computed(() => {
 	)
 })
 
-const visibleVisits =
-	computed <
-	[] >
-	(() => {
-		const allVisits = props.auditor?.visits || []
-		const role = user.value?.rights
+const visibleVisits = computed(() => {
+	const allVisits = props.auditor?.visits || []
+	const role = user.value?.rights
 
-		if (isPrivileged.value) {
-			return allVisits
-		} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
-			const todayString = getTodayString()
-			const weekEndString = getWeekEndString()
-			return allVisits.filter((visit) => {
-				const visitDay = visit.visit_date?.slice(0, 10)
-				return (
-					visitDay >= todayString &&
-					visitDay <= weekEndString &&
-					visit.status_id in [2, 3, 4, 6]
-				)
-			})
-		} else {
-			console.error('Unknown user role:', role)
-			return []
-		}
-	})
+	// Ensure allVisits is an array
+	if (!Array.isArray(allVisits)) {
+		console.error('allVisits is not an array:', allVisits)
+		return []
+	}
+
+	if (isPrivileged.value) {
+		return allVisits
+	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
+		const todayString = getTodayString()
+		const weekEndString = getWeekEndString()
+		return allVisits.filter((visit) => {
+			const visitDay = visit.visit_date?.slice(0, 10)
+			return (
+				visitDay >= todayString &&
+				visitDay <= weekEndString &&
+				[2, 3, 4, 6].includes(visit.status_id) // Fixed: using includes() instead of 'in'
+			)
+		})
+	} else {
+		console.error('Unknown user role:', role)
+		return []
+	}
+})
+
 const timeToMs = (t) => {
 	if (!t) return 0
 	const [h, m = 0, s = 0] = t.split(':').map(Number)
