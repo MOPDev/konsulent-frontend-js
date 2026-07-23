@@ -331,6 +331,16 @@ const loadDocument = async (ID: number) => {
 	}
 }
 
+function fixMinMax(min: number | null, max: number | null): [number | null, number | null] {
+	if (min !== null && max !== null) {
+		if (min > max) {
+			return [max, min]
+		}
+		return [min, max]
+	}
+	return [min, max]
+}
+
 async function submitForm(visitId: number) {
 	if (formData.asset.asset_seen && formData.images.length === 0) {
 		alert('Du skal tilføje mindst ét billede når køretøjet er til stede.')
@@ -348,6 +358,26 @@ async function submitForm(visitId: number) {
 		} else if (visitData.value?.type?.ID === 3) {
 			formData.asset.contract_type = 'Blanco'
 		}
+
+		// verify that the min values are not greater than the max values for monetary fields
+		// salary
+		// verify that the min values are not greater than the max values for monetary fields
+		// salary
+		;[formData.monetary.net_salary_min, formData.monetary.net_salary_max] = fixMinMax(
+			formData.monetary.net_salary_min,
+			formData.monetary.net_salary_max,
+		)
+		// income
+		;[formData.monetary.income_payment_min, formData.monetary.income_payment_max] = fixMinMax(
+			formData.monetary.income_payment_min,
+			formData.monetary.income_payment_max,
+		)
+		// disposable
+		;[formData.monetary.monthly_disposable_min, formData.monetary.monthly_disposable_max] =
+			fixMinMax(
+				formData.monetary.monthly_disposable_min,
+				formData.monetary.monthly_disposable_max,
+			)
 
 		const payload = {
 			visit_id: visitId,
