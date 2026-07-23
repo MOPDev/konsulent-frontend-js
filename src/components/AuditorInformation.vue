@@ -106,7 +106,11 @@ const visibleVisits = computed<VisitItem[]>(() => {
 		const weekEndString = getWeekEndString()
 		return allVisits.filter((visit) => {
 			const visitDay = visit.visit_date?.slice(0, 10)
-			return visitDay >= todayString && visitDay <= weekEndString && visit.status_id === 3
+			return (
+				visitDay >= todayString &&
+				visitDay <= weekEndString &&
+				visit.status_id in [2, 3, 4, 6]
+			)
 		})
 	} else {
 		console.error('Unknown user role:', role)
