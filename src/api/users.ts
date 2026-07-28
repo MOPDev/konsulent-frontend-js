@@ -15,7 +15,14 @@ export const usersApi = {
 		rights?: string
 		email?: string
 		phone?: string
-	}) => client.post('/register', data, UserWithoutVisitsSchema),
+	}) =>
+		client
+			.post(
+				'/register',
+				data,
+				z.object({ message: z.string(), user: UserWithoutVisitsSchema }),
+			)
+			.then((r) => r.user),
 
 	update: (
 		id: number,
