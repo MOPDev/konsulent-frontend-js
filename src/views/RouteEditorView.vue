@@ -14,15 +14,7 @@ import { ref, computed } from 'vue'
 import VisitCard from '@/components/VisitCard.vue'
 import api from '@/utils/axios'
 import { useRoute } from 'vue-router'
-
-interface Visit {
-	ID: number
-	address: string
-	sagsnr: number
-	status_id: number
-	visit_date: string
-	[key: string]: unknown
-}
+import type { VisitWithoutUserOrDebitors } from '@/schemas/index.js'
 
 const route = useRoute()
 
@@ -37,10 +29,13 @@ api.get('/visit-response/all')
 		console.error('Error fetching auditor data:', error)
 	})
 
-const visitsByDate = computed<Record<string, Visit[]>>(() => {
-	const visits: Visit[] = auditor.value?.visits || []
+const visitsByDate = computed<Record<string, VisitWithoutUserOrDebitors[]>>(() => {
+	const visits: VisitWithoutUserOrDebitors[] = auditor.value?.visits || []
 	return visits.reduce(
-		(dateMap: Record<string, Visit[]>, visit: Visit) => {
+		(
+			dateMap: Record<string, VisitWithoutUserOrDebitors[]>,
+			visit: VisitWithoutUserOrDebitors,
+		) => {
 			const date = visit.visit_date
 			if (!dateMap[date]) {
 				dateMap[date] = []
@@ -48,7 +43,7 @@ const visitsByDate = computed<Record<string, Visit[]>>(() => {
 			dateMap[date].push(visit)
 			return dateMap
 		},
-		{} as Record<string, Visit[]>,
+		{} as Record<string, VisitWithoutUserOrDebitors[]>,
 	)
 })
 </script>
