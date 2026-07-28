@@ -63,6 +63,15 @@ function getTodayString(): string {
 	return `${yyyy}-${mm}-${dd}`
 }
 
+function getWeekStartString(): string {
+	const start = new Date()
+	start.setDate(start.getDate() - 7)
+	const yyyy = start.getFullYear()
+	const mm = String(start.getMonth() + 1).padStart(2, '0')
+	const dd = String(start.getDate()).padStart(2, '0')
+	return `${yyyy}-${mm}-${dd}`
+}
+
 function getWeekEndString(): string {
 	const end = new Date()
 	end.setDate(end.getDate() + 7)
@@ -86,7 +95,6 @@ const visibleVisits = computed<VisitItem[]>(() => {
 	const allVisits = (props.auditor?.visits || []) as VisitItem[]
 	const role = user.value?.rights
 
-	// Ensure allVisits is an array
 	if (!Array.isArray(allVisits)) {
 		console.error('allVisits is not an array:', allVisits)
 		return []
@@ -95,12 +103,13 @@ const visibleVisits = computed<VisitItem[]>(() => {
 	if (isPrivileged.value) {
 		return allVisits
 	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
-		const todayString = getTodayString()
+		// ponytail: trial phase, relaxed window (past week -> next week). Tighten/remove when trial ends.
+		const weekStartString = getWeekStartString()
 		const weekEndString = getWeekEndString()
 		return allVisits.filter((visit) => {
 			const visitDay = visit.visit_date.slice(0, 10)
 			return (
-				visitDay >= todayString &&
+				visitDay >= weekStartString && // use getTodayString when trial phase ends
 				visitDay <= weekEndString &&
 				[2, 3, 4, 6].includes(visit.status_id)
 			)
@@ -137,10 +146,10 @@ const groupedVisitsByDate = computed(() => {
 		arr.sort((a, b) => timeToMs(a.visit_time) - timeToMs(b.visit_time))
 	}
 
-	const todayString = getTodayString()
+	const weekStartString = getWeekStartString() // use getTodayString when trial phase ends
 	const weekEndString = getWeekEndString()
 	for (const [date] of map.entries()) {
-		if (date < todayString || date > weekEndString) map.delete(date)
+		if (date < weekStartString || date > weekEndString) map.delete(date)
 	}
 
 	return [...map.entries()].map(([date, visits]) => ({ date, visits }))

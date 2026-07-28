@@ -53,13 +53,28 @@ const isToday = computed(() => {
 	)
 })
 
+const isTodayOrYesterday = computed(() => {
+	const today = new Date()
+	const yesterday = new Date()
+	yesterday.setDate(yesterday.getDate() - 1)
+	const visitDate = new Date(props.visit.visit_date)
+
+	const sameDay = (a: Date, b: Date) =>
+		a.getFullYear() === b.getFullYear() &&
+		a.getMonth() === b.getMonth() &&
+		a.getDate() === b.getDate()
+
+	return sameDay(visitDate, today) || sameDay(visitDate, yesterday)
+})
+
 const isCancelled = computed(() => !!props.visit.cancelled)
 
 const canVisit = computed(
 	() =>
 		!isCancelled.value &&
 		(props.visit.status_id == 3 || props.visit.status_id == 6) &&
-		isToday.value,
+		// ponytail: trial phase, allows visiting yesterday too. Revert to isToday-only when trial ends.
+		isTodayOrYesterday.value,
 )
 
 const buttonLabel = computed(() => {
