@@ -72,11 +72,9 @@ export const visitsApi = {
 	updateVisit: (id: number, data: Partial<{ cancelled: boolean }>) =>
 		client.patch(`/visits/planned/${id}`, data),
 
-	cancelVisit: (id: number) =>
-		client.patch(`/visits/planned/${id}`, { cancelled: true }),
+	cancelVisit: (id: number) => client.patch(`/visits/planned/${id}`, { cancelled: true }),
 
-	uncancelVisit: (id: number) =>
-		client.patch(`/visits/planned/${id}`, { cancelled: false }),
+	uncancelVisit: (id: number) => client.patch(`/visits/planned/${id}`, { cancelled: false }),
 
 	// --- Group operations ---
 
@@ -97,4 +95,9 @@ export const visitsApi = {
 
 	downloadBatchPdf: (ids: number[]) =>
 		client.blob('/visits/besogsbrev/batch', { params: { ids: ids.join(',') } }),
+
+	checkBatchPdf: (ids: number[]) =>
+		client.get<{ results: Record<string, boolean> }>('/visits/besogsbrev/check', undefined, {
+			params: { ids: ids.join(',') },
+		}),
 }

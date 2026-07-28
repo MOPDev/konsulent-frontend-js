@@ -99,7 +99,11 @@ const createUser = async () => {
 		messageError.value = true
 		return
 	}
-	if (!Object.values(USER_RIGHTS).includes(rights.value as typeof USER_RIGHTS[keyof typeof USER_RIGHTS])) {
+	if (
+		!Object.values(USER_RIGHTS).includes(
+			rights.value as (typeof USER_RIGHTS)[keyof typeof USER_RIGHTS],
+		)
+	) {
 		message.value = 'Ugyldig rolle valgt.'
 		messageError.value = true
 		return
@@ -110,11 +114,23 @@ const createUser = async () => {
 	initials.value = initials.value.trim()
 	password.value = generatePassword()
 
+	/*
+		var body struct {
+		Initials string `json:"initials" form:"initials" binding:"required"`
+		FullName string `json:"fullName" form:"fullName" binding:"required"`
+		Username string `json:"username" form:"name" binding:"required"`
+		Password string `json:"password" form:"password" binding:"required"`
+		Email    string `json:"email" form:"email"`
+		Rights   string `json:"rights"`
+	}
+
+	*/
+
 	try {
 		await usersApi.create({
 			username: username.value,
 			password: password.value,
-			name: fullName.value,
+			FullName: fullName.value,
 			rights: rights.value,
 			initials: initials.value,
 		})
