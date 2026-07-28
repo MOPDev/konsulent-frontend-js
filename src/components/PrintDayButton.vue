@@ -10,9 +10,10 @@
 import { ref, computed, type ComputedRef } from 'vue'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
+import type { VisitWithoutUserOrDebitors } from '@/schemas/index.js'
 
 const props = defineProps<{
-	visitIds: number[]
+	visitIds: VisitWithoutUserOrDebitors[]
 }>()
 
 const loading = ref(false)
@@ -31,8 +32,10 @@ async function printAll() {
 
 	const timer = setInterval(() => elapsed.value++, 1000)
 
+	const activeVisits = props.visitIds.filter((visit) => visit.cancelled !== true)
+
 	try {
-		const ids = props.visitIds.join(',')
+		const ids = activeVisits.map((v) => v.ID).join(',')
 		const response = await api.get(`/visits/besogsbrev/batch?ids=${ids}`, {
 			responseType: 'blob',
 		})

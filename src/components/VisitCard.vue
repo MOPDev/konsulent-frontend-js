@@ -30,20 +30,9 @@
 import { useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import BesogsbrevButton from './forms/BesogsbrevButton.vue'
+import type { VisitWithoutUserOrDebitors } from '@/schemas/index.js'
 
-interface VisitCardData {
-	ID: number
-	address: string
-	sagsnr: number
-	visit_date: string
-	visit_time?: string
-	visit_interval?: string
-	status_id: number
-	cancelled?: boolean | null
-	visit_response?: unknown
-	type?: { text: string }
-	[key: string]: unknown
-}
+type VisitCardData = VisitWithoutUserOrDebitors
 
 const router = useRouter()
 

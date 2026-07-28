@@ -20,16 +20,10 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
-
 import AuditorInformation from '@/components/AuditorInformation.vue'
+import type { UserWithVisits } from '@/schemas/index.js'
 
-interface Auditor {
-	ID: number
-	name: string
-	phone: string
-	email: string
-	[key: string]: unknown
-}
+type Auditor = UserWithVisits
 
 const route = useRoute()
 

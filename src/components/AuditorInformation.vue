@@ -12,7 +12,7 @@
 					})
 				}}
 			</h3>
-			<PrintDayButton :visitIds="group.visits.map((v) => v.ID)" />
+			<PrintDayButton :visitIds="group.visits" />
 		</div>
 
 		<div class="table-responsive">
@@ -30,7 +30,7 @@
 				<tbody>
 					<VisitCard
 						v-for="visit in group.visits"
-						:key="visit.id"
+						:key="visit.ID"
 						:visit="visit"
 						:show-extra="isPrivileged"
 					/>
@@ -45,24 +45,11 @@ import { computed } from 'vue'
 import VisitCard from './VisitCard.vue'
 import PrintDayButton from './PrintDayButton.vue'
 import { useAuthStore, USER_RIGHTS } from '@/stores/auth'
+import type { VisitWithoutUserOrDebitors, UserWithVisits } from '@/schemas/index.js'
 
-interface VisitItem {
-	ID: number
-	id?: number
-	address: string
-	sagsnr: number
-	visit_date: string
-	visit_time?: string
-	status_id: number
-	cancelled?: boolean | null
-	type?: { text: string }
-	[key: string]: unknown
-}
+type VisitItem = VisitWithoutUserOrDebitors
 
-interface AuditorInfo {
-	visits?: VisitItem[]
-	[key: string]: unknown
-}
+type AuditorInfo = UserWithVisits
 
 const props = defineProps<{
 	auditor: AuditorInfo
@@ -105,7 +92,7 @@ const visibleVisits = computed<VisitItem[]>(() => {
 		const todayString = getTodayString()
 		const weekEndString = getWeekEndString()
 		return allVisits.filter((visit) => {
-			const visitDay = visit.visit_date?.slice(0, 10)
+			const visitDay = visit.visit_date.slice(0, 10)
 			return (
 				visitDay >= todayString &&
 				visitDay <= weekEndString &&

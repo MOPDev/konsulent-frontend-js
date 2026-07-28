@@ -1,9 +1,11 @@
 import { z } from 'zod'
 
-export const DeletedAtSchema = z.object({
-	Time: z.coerce.date(),
-	Valid: z.boolean(),
-}).nullable()
+export const DeletedAtSchema = z
+	.object({
+		Time: z.coerce.date(),
+		Valid: z.boolean(),
+	})
+	.nullable()
 export type DeletedAt = z.infer<typeof DeletedAtSchema>
 
 export const ModelSchema = z.object({
@@ -164,7 +166,7 @@ export const VisitWithoutUserOrDebitorsSchema = z.object({
 	notes: z.string(),
 	sagsnr: z.number(),
 	stop_nr: z.number(),
-	visit_date: z.coerce.date(),
+	visit_date: z.string(), //z.coerce.date(),
 	visit_time: z.string(),
 	visit_interval: z.string(),
 	visited: z.boolean(),
@@ -198,3 +200,9 @@ export const DebitorWithoutVisitsSchema = z.object({
 	notes: z.string(),
 })
 export type DebitorWithoutVisits = z.infer<typeof DebitorWithoutVisitsSchema>
+
+export const UserWithVisitsSchema = z.object({
+	...UserWithoutVisitsSchema.shape,
+	visits: VisitWithoutUserOrDebitorsSchema.array().optional(),
+})
+export type UserWithVisits = z.infer<typeof UserWithVisitsSchema>
