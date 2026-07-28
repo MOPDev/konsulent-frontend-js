@@ -86,6 +86,12 @@ const visibleVisits = computed<VisitItem[]>(() => {
 	const allVisits = (props.auditor?.visits || []) as VisitItem[]
 	const role = user.value?.rights
 
+	// Ensure allVisits is an array
+	if (!Array.isArray(allVisits)) {
+		console.error('allVisits is not an array:', allVisits)
+		return []
+	}
+
 	if (isPrivileged.value) {
 		return allVisits
 	} else if (role === USER_RIGHTS.USER || role === USER_RIGHTS.AUDITOR) {
