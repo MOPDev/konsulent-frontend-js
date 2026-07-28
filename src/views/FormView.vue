@@ -5,7 +5,8 @@
 
 		<PurchaseForm
 			v-if="visitData?.type?.ID === 1"
-			v-model:formData="formData"
+			:formData="formData"
+			@update:formData="Object.assign(formData, $event)"
 			:visitData="visitData"
 			:docBlob="docBlob"
 			@submit="() => submitForm(visitData!.ID)"
@@ -15,7 +16,8 @@
 		/>
 		<LeasingForm
 			v-if="visitData?.type?.ID === 2"
-			v-model:formData="formData"
+			:formData="formData"
+			@update:formData="Object.assign(formData, $event)"
 			:visitData="visitData"
 			:docBlob="docBlob"
 			@submit="() => submitForm(visitData!.ID)"
@@ -25,7 +27,8 @@
 		/>
 		<BlancoForm
 			v-if="visitData?.type?.ID === 3"
-			v-model:formData="formData"
+			:formData="formData"
+			@update:formData="Object.assign(formData, $event)"
 			:visitData="visitData"
 			:docBlob="docBlob"
 			@submit="() => submitForm(visitData!.ID)"
@@ -35,7 +38,8 @@
 		/>
 		<LetterForm
 			v-if="visitData?.type?.ID === 4"
-			v-model:formData="formData"
+			:formData="formData"
+			@update:formData="Object.assign(formData, $event)"
 			:visitData="visitData"
 			:docBlob="docBlob"
 			@submit="() => submitForm(visitData!.ID)"
