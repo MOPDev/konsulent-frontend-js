@@ -4,58 +4,53 @@ new ones
 	<div class="card">
 		<div v-for="date in Object.keys(visitsByDate).sort()" :key="date" class="visit-group">
 			<h3>{{ date.slice(0, 10) }}</h3>
-			<VisitCard v-for="visit in visitsByDate[date]" :key="visit.sagsnr" :visit="visit" />
+			<VisitCard v-for="(visit, index) in visitsByDate[date]" :key="index" :visit="visit" />
 		</div>
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import VisitCard from '@/components/VisitCard.vue'
-import api from '@/utils/axios.js'
+import api from '@/utils/axios'
 import { useRoute } from 'vue-router'
+
+interface Visit {
+	ID: number
+	address: string
+	sagsnr: number
+	status_id: number
+	visit_date: string
+	[key: string]: unknown
+}
+
 const route = useRoute()
 
 const ID = Number(route.params.id)
-const auditor = ref()
+const auditor = ref<any>(null)
 
 api.get('/visit-response/all')
 	.then((response) => {
-		auditor.value = response.data.users.find((user) => user.ID === ID)
+		auditor.value = response.data.users.find((user: any) => user.ID === ID)
 	})
-	.catch((error) => {
+	.catch((error: any) => {
 		console.error('Error fetching auditor data:', error)
-		// Fallback to mock data if API call fails
 	})
 
-const visitsByDate = computed(() => {
-	console.log('Computing visitsByDate for auditor:', auditor.value.visits)
-	const visits = auditor.value?.visits || []
-	// dateMap = { '2024-06-22': [visit1, visit2], '2024-06-23': [visit3]}
-	return visits.reduce((dateMap, visit) => {
-		const date = visit.visit_date
-		if (!dateMap[date]) {
-			dateMap[date] = []
-		}
-		dateMap[date].push(visit)
-		return dateMap
-	}, {})
+const visitsByDate = computed<Record<string, Visit[]>>(() => {
+	const visits: Visit[] = auditor.value?.visits || []
+	return visits.reduce(
+		(dateMap: Record<string, Visit[]>, visit: Visit) => {
+			const date = visit.visit_date
+			if (!dateMap[date]) {
+				dateMap[date] = []
+			}
+			dateMap[date].push(visit)
+			return dateMap
+		},
+		{} as Record<string, Visit[]>,
+	)
 })
-
-/** @typedef {Object} Visit
- *  @property {number} user_id
- * @property {string} address
- * @property {string} DebitorName
- * @property {string} DebitorPhone
- * @property {string} latitude
- * @property {string} longitude
- * @property {string} notes
- * @property {number} sagsnr
- * @property {string} VisitDate
- * @property {string} VisitTime
- * @property {string} visit_interval
- * @property {boolean} visited
- */
 </script>
 
 <style scoped></style>

@@ -1,0 +1,20 @@
+import { client } from './client'
+import { UserWithoutVisitsSchema } from '@/schemas'
+import { z } from 'zod'
+
+const UsersResponseSchema = z.object({ users: UserWithoutVisitsSchema.array() })
+
+export const usersApi = {
+  getAll: () => client.get('/users', UsersResponseSchema).then((r) => r.users),
+
+  create: (data: { username: string; name: string; initials: string; password: string; rights?: string; email?: string; phone?: string }) =>
+    client.post('/register', data, UserWithoutVisitsSchema),
+
+  update: (id: number, data: { username?: string; name?: string; initials?: string; email?: string | null; phone?: string | null; rights?: string }) =>
+    client.patch(`/users/${id}`, data, UserWithoutVisitsSchema),
+
+  changePassword: (id: number, newPassword: string) =>
+    client.patch(`/users/${id}/password`, { new_password: newPassword }),
+
+  delete: (id: number) => client.del(`/users/${id}`),
+}

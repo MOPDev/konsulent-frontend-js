@@ -109,12 +109,21 @@
 	</div>
 </template>
 
-<script setup>
-import api from '@/utils/axios'
+<script setup lang="ts">
+import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
-
 import { ref, onMounted } from 'vue'
-import { useAuthStore, USER_RIGHTS } from '@/stores/auth.js'
+import { useAuthStore, USER_RIGHTS } from '@/stores/auth'
+
+interface UserData {
+	ID: number
+	username: string
+	name: string
+	initials: string
+	email: string
+	phone: string
+	rights: string
+}
 
 const ROLE_OPTIONS = [
 	{ value: USER_RIGHTS.OFFICE, label: 'Kontor' },
@@ -124,12 +133,19 @@ const ROLE_OPTIONS = [
 ]
 
 const authStore = useAuthStore()
-const users = ref([])
-const editingUserId = ref(null)
-const message = ref('')
-const messageError = ref(false)
+const users = ref<UserData[]>([])
+const editingUserId = ref<number | null>(null)
+const message = ref<string>('')
+const messageError = ref<boolean>(false)
 
-const editData = ref({
+const editData = ref<{
+	username: string
+	name: string
+	initials: string
+	email: string
+	phone: string
+	rights: string
+}>({
 	username: '',
 	name: '',
 	initials: '',
@@ -142,18 +158,16 @@ onMounted(() => {
 	fetchUsers()
 })
 
-function fetchUsers() {
-	api.get('/users')
-		.then((response) => {
-			users.value = response.data.users
-		})
-		.catch((error) => {
-			console.error('Error fetching users:', error)
-			errorApi.log('Error fetching users: ' + error.message)
-		})
+async function fetchUsers() {
+	try {
+		users.value = await usersApi.getAll()
+	} catch (error: any) {
+		console.error('Error fetching users:', error)
+		errorApi.log('Error fetching users: ' + error.message)
+	}
 }
 
-function badgeClass(rights) {
+function badgeClass(rights: string): string {
 	switch (rights) {
 		case USER_RIGHTS.ADMIN:
 			return 'bg-primary'
@@ -168,8 +182,8 @@ function badgeClass(rights) {
 	}
 }
 
-function setEditingUserId(userId) {
-	const user = users.value.find((u) => u.ID === userId)
+function setEditingUserId(userId: number) {
+	const user = users.value.find((u: UserData) => u.ID === userId)
 	if (user) {
 		editData.value = {
 			username: user.username || '',
@@ -188,33 +202,32 @@ function cancelEdit() {
 	message.value = ''
 }
 
-function editUser(userId) {
-	api.patch(`/users/${userId}`, {
-		username: editData.value.username,
-		name: editData.value.name,
-		initials: editData.value.initials,
-		email: editData.value.email || null,
-		phone: editData.value.phone || null,
-		rights: editData.value.rights,
-	})
-		.then((response) => {
-			const index = users.value.findIndex((u) => u.ID === userId)
-			if (index !== -1) {
-				users.value[index] = { ...users.value[index], ...response.data }
-			}
-			editingUserId.value = null
-			message.value = 'Bruger opdateret!'
-			messageError.value = false
+async function editUser(userId: number) {
+	try {
+		const updated = await usersApi.update(userId, {
+			username: editData.value.username,
+			name: editData.value.name,
+			initials: editData.value.initials,
+			email: editData.value.email || null,
+			phone: editData.value.phone || null,
+			rights: editData.value.rights,
 		})
-		.catch((error) => {
-			console.error('Error updating user:', error)
-			message.value = 'Fejl ved opdatering: ' + (error.response?.data?.error || error.message)
-			messageError.value = true
-		})
+		const index = users.value.findIndex((u: UserData) => u.ID === userId)
+		if (index !== -1) {
+			users.value[index] = { ...users.value[index], ...updated }
+		}
+		editingUserId.value = null
+		message.value = 'Bruger opdateret!'
+		messageError.value = false
+	} catch (error: any) {
+		console.error('Error updating user:', error)
+		message.value = 'Fejl ved opdatering: ' + (error.response?.data?.error || error.message)
+		messageError.value = true
+	}
 }
 
-async function deleteUser(userId) {
-	if (authStore.user.rights !== 'developer') {
+async function deleteUser(userId: number) {
+	if (authStore.user?.rights !== 'developer') {
 		message.value = 'Kun developer kan slette brugere'
 		messageError.value = true
 		return
@@ -223,13 +236,13 @@ async function deleteUser(userId) {
 	if (!confirm('Er du sikker på at du vil slette denne bruger?')) return
 
 	const prev = [...users.value]
-	users.value = users.value.filter((u) => u.ID !== userId)
+	users.value = users.value.filter((u: UserData) => u.ID !== userId)
 
 	try {
-		await api.delete(`/users/${userId}`)
+		await usersApi.delete(userId)
 		message.value = 'Bruger slettet'
 		messageError.value = false
-	} catch (err) {
+	} catch (err: any) {
 		users.value = prev
 		message.value = 'Fejl ved sletning: ' + (err.response?.data?.error || err.message)
 		messageError.value = true

@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<h1>Velkommen {{ authStore.user.name }}</h1>
+		<h1>Velkommen {{ authStore.user?.name }}</h1>
 		<br />
 		<br />
 
@@ -12,22 +12,22 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import KonsulentCard from '@/components/KonsulentCard.vue'
-import { useAuthStore } from '@/stores/auth.js'
-import api from '@/utils/axios.js'
+import { useAuthStore } from '@/stores/auth'
+import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
 
 const authStore = useAuthStore()
 
-const users = ref([])
+const users = ref<any[]>([])
 
 api.get('/visit-response/all')
 	.then((response) => {
-		users.value = response.data.users.filter((user) => user.ID !== 1)
+		users.value = response.data.users.filter((user: any) => user.ID !== 1)
 	})
-	.catch((error) => {
+	.catch((error: any) => {
 		errorApi.log('Error fetching users: ' + error.message)
 	})
 </script>

@@ -2,7 +2,7 @@
 	<div class="add-routes">
 		<h3>Upload Besøgs Liste fra RoutePlanner</h3>
 
-		<form @submit.prevent="handleUpload">
+		<form @submit.prevent="uploadPlannedRoute">
 			<div>
 				<label>Excel-fil (xlsx):</label>
 				<input type="file" accept=".xlsx, .xls" @change="onFileChange" required />
@@ -53,60 +53,64 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import * as XLSX from 'xlsx'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
-
 import { useAuthStore } from '@/stores/auth'
 
-const authStore = useAuthStore()
-const users = ref([])
-const selectedUser = ref()
-const excelFile = ref(null) // Store the actual file
-const excelRows = ref([])
-const excelColumns = ref([])
-const isUploading = ref(false)
-const uploadError = ref('')
-const selectedDate = ref('')
-const today = new Date().toISOString().split('T')[0] // Format: YYYY-MM-DD
+interface User {
+	ID: number
+	name: string
+	[key: string]: unknown
+}
 
-// Allowed file types for security
+interface ExcelRow {
+	[column: string]: unknown
+}
+
+const authStore = useAuthStore()
+const users = ref<User[]>([])
+const selectedUser = ref<number | string>('')
+const excelFile = ref<File | null>(null)
+const excelRows = ref<ExcelRow[]>([])
+const excelColumns = ref<string[]>([])
+const isUploading = ref<boolean>(false)
+const uploadError = ref<string>('')
+const selectedDate = ref<string>('')
+const today: string = new Date().toISOString().split('T')[0]
+
 const ALLOWED_EXTENSIONS = ['.xlsx', '.xls']
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB max
+const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 onMounted(async () => {
 	try {
-		// Check authentication before making API calls
 		if (!authStore.isAuthenticated) {
 			throw new Error('User not authenticated')
 		}
 
 		const response = await api.get('/users')
 		users.value = response.data.users
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Failed to fetch users:', err)
 		errorApi.logError(err)
-		// Handle error appropriately - maybe redirect to login if 401
 		if (err.response?.status === 401) {
 			authStore.logout()
 		}
 	}
 })
 
-function validateFile(file) {
+function validateFile(file: File): boolean {
 	if (!file) {
 		throw new Error('Ingen fil valgt')
 	}
 
-	// Check file extension
-	const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
-	if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
+	const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
+	if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
 		throw new Error('Kun Excel filer (.xlsx, .xls) er tilladt')
 	}
 
-	// Check file size
 	if (file.size > MAX_FILE_SIZE) {
 		errorApi.log('Attempted to upload a file that is too large: ' + file.name)
 		throw new Error('Filen er for stor. Maksimum størrelse er 10MB')
@@ -115,8 +119,9 @@ function validateFile(file) {
 	return true
 }
 
-function onFileChange(e) {
-	const file = e.target.files[0]
+function onFileChange(e: Event) {
+	const target = e.target as HTMLInputElement
+	const file = target.files?.[0]
 
 	try {
 		if (!file) {
@@ -124,21 +129,19 @@ function onFileChange(e) {
 			return
 		}
 
-		// Validate file before processing
 		validateFile(file)
 
-		// Store the file for later upload
 		excelFile.value = file
 		uploadError.value = ''
 
 		const reader = new FileReader()
-		reader.onload = (evt) => {
+		reader.onload = (evt: ProgressEvent<FileReader>) => {
 			try {
-				const data = new Uint8Array(evt.target.result)
+				const data = new Uint8Array(evt.target?.result as ArrayBuffer)
 				const workbook = XLSX.read(data, { type: 'array' })
 				const sheetName = workbook.SheetNames[0]
 				const ws = workbook.Sheets[sheetName]
-				const json = XLSX.utils.sheet_to_json(ws, { defval: '' })
+				const json = XLSX.utils.sheet_to_json<ExcelRow>(ws, { defval: '' })
 
 				if (json.length === 0) {
 					throw new Error('Excel filen er tom')
@@ -146,7 +149,7 @@ function onFileChange(e) {
 
 				excelRows.value = json
 				excelColumns.value = Object.keys(json[0] || {})
-			} catch (error) {
+			} catch (error: any) {
 				console.error('Error reading Excel file:', error)
 				errorApi.log('Error reading Excel file: ' + error.message)
 				uploadError.value = 'Kunne ikke læse filen, tjek format!'
@@ -160,7 +163,7 @@ function onFileChange(e) {
 		}
 
 		reader.readAsArrayBuffer(file)
-	} catch (error) {
+	} catch (error: any) {
 		uploadError.value = error.message
 		resetFileData()
 	}
@@ -179,8 +182,7 @@ function resetForm() {
 	selectedUser.value = ''
 	selectedDate.value = ''
 
-	// Clear the file input
-	const fileInput = document.querySelector('input[type="file"]')
+	const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')
 	if (fileInput) fileInput.value = ''
 }
 
@@ -199,18 +201,16 @@ async function uploadPlannedRoute() {
 		isUploading.value = true
 		uploadError.value = ''
 
-		// Create FormData to send the file
 		const formData = new FormData()
 		formData.append('file', excelFile.value)
-		formData.append('userId', selectedUser.value)
+		formData.append('userId', String(selectedUser.value))
 		formData.append('date', selectedDate.value)
 
-		const response = await api.post('/visits/plan', formData, {
+		await api.post('/visits/plan', formData, {
 			headers: {
 				'Content-Type': 'multipart/form-data',
 			},
-			// Track upload progress if needed
-			onUploadProgress: (progressEvent) => {
+			onUploadProgress: (progressEvent: any) => {
 				const percentCompleted = Math.round(
 					(progressEvent.loaded * 100) / progressEvent.total,
 				)
@@ -218,14 +218,10 @@ async function uploadPlannedRoute() {
 			},
 		})
 
-		console.log('Upload successful:', response.data)
-
-		// Reset form after successful upload
 		resetForm()
-		// Clear the file input
-		const fileInput = document.querySelector('input[type="file"]')
+		const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')
 		if (fileInput) fileInput.value = ''
-	} catch (error) {
+	} catch (error: any) {
 		console.error('Upload failed:', error)
 		errorApi.log('Error uploading planned route: ' + error.message)
 		if (error.response?.status === 401) {

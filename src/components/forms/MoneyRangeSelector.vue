@@ -64,26 +64,36 @@
   </fieldset>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps({
-  label: { type: String, required: true },
-  name: { type: String, required: true },
-  modelValueMin: { type: [Number, null], default: null },
-  modelValueMax: { type: [Number, null], default: null },
-  min: { type: Number, default: 0 },
-  max: { type: Number, default: 100000 },
-  step: { type: Number, default: 1000 },
+interface Props {
+  label: string
+  name: string
+  modelValueMin?: number | null
+  modelValueMax?: number | null
+  min?: number
+  max?: number
+  step?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValueMin: null,
+  modelValueMax: null,
+  min: 0,
+  max: 100000,
+  step: 1000,
 })
 
-const emit = defineEmits(['update:modelValueMin', 'update:modelValueMax'])
+const emit = defineEmits<{
+  (e: 'update:modelValueMin', value: number | null): void
+  (e: 'update:modelValueMax', value: number | null): void
+}>()
 
 const minVal = computed({
   get: () => props.modelValueMin ?? props.min,
-  set: (v) => {
+  set: (v: number) => {
     emit('update:modelValueMin', v)
-    // Adjust max value to not be lower than min value
     if (props.modelValueMax !== null && v > props.modelValueMax) {
       emit('update:modelValueMax', v)
     }
@@ -92,16 +102,15 @@ const minVal = computed({
 
 const maxVal = computed({
   get: () => props.modelValueMax ?? props.max,
-  set: (v) => {
+  set: (v: number) => {
     emit('update:modelValueMax', v)
-    // Adjust min value to not be higher than max value
     if (props.modelValueMin !== null && v < props.modelValueMin) {
       emit('update:modelValueMin', v)
     }
   },
 })
 
-function formatValue(val) {
+function formatValue(val: number | null | undefined): string {
   if (val === null || val === undefined) return '0 kr.'
   return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', maximumFractionDigits: 0 }).format(val)
 }

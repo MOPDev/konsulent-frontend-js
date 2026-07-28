@@ -48,38 +48,42 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import SelectField from '@/components/forms/SelectField.vue'
 
-const props = defineProps({
-	formData: { type: Object, required: true },
-})
+interface QuickFill {
+	tag: string
+	field: string
+}
 
-const fd = computed({
+const props = defineProps<{
+	formData: Record<string, unknown>
+}>()
+
+const fd = computed<any>({
 	get: () => props.formData,
 	set: () => {},
 })
 
-// ponytail: tag <-> bool field mapping lives here since it's only used by this section's quick-fills
-const quickFills = [
+const quickFills: QuickFill[] = [
 	{ tag: 'overbegroet have', field: 'overgrown_garden' },
 	{ tag: 'fyldt postkasse', field: 'mailbox_full' },
 	{ tag: 'knuste ruder', field: 'broken_windows' },
 	{ tag: 'efterladte køretøjer', field: 'abandoned_vehicles' },
 	{ tag: 'overfyldt affald', field: 'trash_overflown' },
 	{ tag: 'til salg-skilt', field: 'forsale_sign' },
+	{ tag: 'Pænt vedligeholdt', field: 'well_maintained' },
 ]
 
-function splitNote(note) {
+function splitNote(note: string): string[] {
 	return (note || '')
 		.split(',')
 		.map((s) => s.trim())
 		.filter(Boolean)
 }
 
-// toggling a badge: flip the bool field and add/remove the tag text in the note
-function toggleTag(t) {
+function toggleTag(t: QuickFill) {
 	const parts = splitNote(fd.value.property.note)
 	const has = fd.value.property[t.field]
 
@@ -91,11 +95,9 @@ function toggleTag(t) {
 		const i = parts.indexOf(t.tag)
 		if (i !== -1) parts.splice(i, 1)
 	}
-	// ponytail: trailing comma even with one tag, so auditor typing free text after doesn't merge into the last tag
 	fd.value.property.note = parts.length ? parts.join(', ') + ', ' : ''
 }
 
-// typing/editing the note directly: recognized tags set their bool, everything else stays free text
 function syncFromNote() {
 	const parts = splitNote(fd.value.property.note)
 	for (const t of quickFills) {

@@ -1,6 +1,6 @@
 //VisitCard.vue
 <template>
-	<tr style="width: 100%">
+	<tr style="width: 100%" :class="{ 'cancelled-row': visit.cancelled }">
 		<td>
 			<button
 				class="visit-btn"
@@ -11,7 +11,7 @@
 				{{ buttonLabel }}
 			</button>
 		</td>
-
+		<td>{{ visit.type?.text ?? '—' }}</td>
 		<td class="address-cell" @click="copyAddress">
 			<span>{{ visit.address }}</span>
 			<span class="copy-feedback" :class="{ visible: copied }">✓ Kopieret</span>
@@ -26,18 +26,20 @@
 	</tr>
 </template>
 
-<script setup>
-import router from '@/router'
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import BesogsbrevButton from './forms/BesogsbrevButton.vue'
+import type { VisitWithoutUserOrDebitors } from '@/schemas/index.js'
 
-const props = defineProps({
-	visit: Object,
-	showExtra: {
-		type: Boolean,
-		default: false,
-	},
-})
+type VisitCardData = VisitWithoutUserOrDebitors
+
+const router = useRouter()
+
+const props = defineProps<{
+	visit: VisitCardData
+	showExtra?: boolean
+}>()
 
 const copied = ref(false)
 
@@ -51,11 +53,17 @@ const isToday = computed(() => {
 	)
 })
 
+const isCancelled = computed(() => !!props.visit.cancelled)
+
 const canVisit = computed(
-	() => (props.visit.status_id == 3 || props.visit.status_id == 6) && isToday.value,
+	() =>
+		!isCancelled.value &&
+		(props.visit.status_id == 3 || props.visit.status_id == 6) &&
+		isToday.value,
 )
 
 const buttonLabel = computed(() => {
+	if (isCancelled.value) return 'Aflyst'
 	if (props.visit.status_id === 6) return 'Prøv at besvare igen'
 	if (canVisit.value) return 'Besøg'
 	if (props.visit.status_id === 2) return 'send brev'
@@ -64,6 +72,7 @@ const buttonLabel = computed(() => {
 })
 
 const buttonClass = computed(() => {
+	if (isCancelled.value) return 'btn-cancelled'
 	if (canVisit.value) return 'btn-active'
 	if (props.visit.visit_response || props.visit.status_id > 3) return 'btn-visited'
 	return 'btn-waiting'
@@ -122,6 +131,23 @@ function open() {
 	color: white;
 	opacity: 0.6;
 	cursor: default;
+}
+
+.btn-cancelled {
+	background-color: #ef4444;
+	color: white;
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.cancelled-row {
+	text-decoration: line-through;
+	color: #9ca3af;
+	background-color: #fef2f2 !important;
+}
+
+.cancelled-row td {
+	color: #9ca3af;
 }
 
 .address-cell {

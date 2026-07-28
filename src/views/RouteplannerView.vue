@@ -18,10 +18,10 @@
 	</div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type Component } from 'vue'
 import { usePlannerStore } from '@/stores/plannerStore'
-import { useAuthStore } from '@/stores/auth.js'
+import { useAuthStore } from '@/stores/auth'
 import CreateVisits from '@/components/CreateVisits.vue'
 import NonPlannedVisits from '@/components/NonPlannedVisits.vue'
 import PlanVisits from '@/components/PlanVisits.vue'
@@ -32,7 +32,7 @@ import ReviewVisits from '@/components/ReviewVisits.vue'
 const PlannerStore = usePlannerStore()
 const AuthStore = useAuthStore()
 
-const components = {
+const components: Record<string, Component> = {
 	createVisits: CreateVisits,
 	nonPlannedVisits: NonPlannedVisits,
 	planVisits: PlanVisits,
@@ -41,7 +41,7 @@ const components = {
 	reviewVisits: ReviewVisits,
 }
 
-const isAllowed = computed(() => {
+const isAllowed = computed<boolean>(() => {
 	let allowed = false
 
 	if (AuthStore.user?.rights === 'admin') {
@@ -57,5 +57,5 @@ const isAllowed = computed(() => {
 	return allowed
 })
 
-const getActiveComponent = computed(() => components[PlannerStore.activeTab])
+const getActiveComponent = computed<Component>(() => components[PlannerStore.activeTab])
 </script>

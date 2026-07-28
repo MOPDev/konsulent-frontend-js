@@ -12,7 +12,7 @@
 					})
 				}}
 			</h3>
-			<PrintDayButton :visitIds="group.visits.map((v) => v.ID)" />
+			<PrintDayButton :visitIds="group.visits" />
 		</div>
 
 		<div class="table-responsive">
@@ -20,6 +20,7 @@
 				<thead>
 					<tr>
 						<th>Status</th>
+						<th>Type</th>
 						<th>Adresse</th>
 						<th>Ankomst</th>
 						<th>Sagsnr</th>
@@ -29,7 +30,7 @@
 				<tbody>
 					<VisitCard
 						v-for="visit in group.visits"
-						:key="visit.id"
+						:key="visit.ID"
 						:visit="visit"
 						:show-extra="isPrivileged"
 					/>
@@ -39,20 +40,22 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import VisitCard from './VisitCard.vue'
 import PrintDayButton from './PrintDayButton.vue'
-import { useAuthStore, USER_RIGHTS } from '@/stores/auth.js'
+import { useAuthStore, USER_RIGHTS } from '@/stores/auth'
+import type { VisitWithoutUserOrDebitors, UserWithVisits } from '@/schemas/index.js'
 
-const props = defineProps({
-	auditor: {
-		type: Object,
-		required: true,
-	},
-})
+type VisitItem = VisitWithoutUserOrDebitors
 
-function getTodayString() {
+type AuditorInfo = UserWithVisits
+
+const props = defineProps<{
+	auditor: AuditorInfo
+}>()
+
+function getTodayString(): string {
 	const today = new Date()
 	const yyyy = today.getFullYear()
 	const mm = String(today.getMonth() + 1).padStart(2, '0')
@@ -60,7 +63,7 @@ function getTodayString() {
 	return `${yyyy}-${mm}-${dd}`
 }
 
-function getWeekEndString() {
+function getWeekEndString(): string {
 	const end = new Date()
 	end.setDate(end.getDate() + 7)
 	const yyyy = end.getFullYear()
@@ -79,8 +82,8 @@ const isPrivileged = computed(() => {
 	)
 })
 
-const visibleVisits = computed(() => {
-	const allVisits = props.auditor?.visits || []
+const visibleVisits = computed<VisitItem[]>(() => {
+	const allVisits = (props.auditor?.visits || []) as VisitItem[]
 	const role = user.value?.rights
 
 	// Ensure allVisits is an array
@@ -95,11 +98,11 @@ const visibleVisits = computed(() => {
 		const todayString = getTodayString()
 		const weekEndString = getWeekEndString()
 		return allVisits.filter((visit) => {
-			const visitDay = visit.visit_date?.slice(0, 10)
+			const visitDay = visit.visit_date.slice(0, 10)
 			return (
 				visitDay >= todayString &&
 				visitDay <= weekEndString &&
-				[2, 3, 4, 6].includes(visit.status_id) // Fixed: using includes() instead of 'in'
+				[2, 3, 4, 6].includes(visit.status_id)
 			)
 		})
 	} else {
@@ -108,13 +111,13 @@ const visibleVisits = computed(() => {
 	}
 })
 
-const timeToMs = (t) => {
+const timeToMs = (t: string | undefined): number => {
 	if (!t) return 0
 	const [h, m = 0, s = 0] = t.split(':').map(Number)
 	return ((h * 60 + m) * 60 + s) * 1000
 }
 
-const dayFromUtcISO = (iso) => iso.slice(0, 10)
+const dayFromUtcISO = (iso: string): string => iso.slice(0, 10)
 
 const groupedVisitsByDate = computed(() => {
 	const sorted = [...visibleVisits.value].sort((a, b) => {
@@ -123,11 +126,11 @@ const groupedVisitsByDate = computed(() => {
 		return aKey - bKey
 	})
 
-	const map = new Map()
+	const map = new Map<string, VisitItem[]>()
 	for (const v of sorted) {
 		const day = dayFromUtcISO(v.visit_date)
 		if (!map.has(day)) map.set(day, [])
-		map.get(day).push(v)
+		map.get(day)!.push(v)
 	}
 
 	for (const arr of map.values()) {
@@ -135,8 +138,9 @@ const groupedVisitsByDate = computed(() => {
 	}
 
 	const todayString = getTodayString()
+	const weekEndString = getWeekEndString()
 	for (const [date] of map.entries()) {
-		if (date < todayString) map.delete(date)
+		if (date < todayString || date > weekEndString) map.delete(date)
 	}
 
 	return [...map.entries()].map(([date, visits]) => ({ date, visits }))

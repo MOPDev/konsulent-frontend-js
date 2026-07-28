@@ -32,21 +32,30 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import CardStatusField from '@/components/CardStatusField.vue'
 import { minBy } from 'lodash-es'
-import { defineProps, computed } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
-const router = useRouter()
-const props = defineProps({
-	konsulent: {
-		type: Object,
-		required: true,
-	},
-})
+interface KonsulentVisit {
+	visit_date: string
+	visit_time: string | null
+	visit_response: unknown | null
+}
 
-function upperFirst(fullName) {
+interface Konsulent {
+	ID: number
+	name: string
+	visits: KonsulentVisit[]
+}
+
+const router = useRouter()
+const props = defineProps<{
+	konsulent: Konsulent
+}>()
+
+function upperFirst(fullName: string): string {
 	if (typeof fullName !== 'string' || !fullName.trim()) {
 		return ''
 	}
@@ -59,7 +68,7 @@ function upperFirst(fullName) {
 	return initials
 }
 
-function isToday(dateString) {
+function isToday(dateString: string) {
 	const visitDate = new Date(dateString)
 	const today = new Date()
 	return (
@@ -105,7 +114,7 @@ function randomColor() {
 	return color
 }
 
-function getLuminance(color) {
+function getLuminance(color: string): number {
 	const hex = color.replace(/^#/, '')
 	const r = parseInt(hex.slice(0, 2), 16) / 255
 	const g = parseInt(hex.slice(2, 4), 16) / 255

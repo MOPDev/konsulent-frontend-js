@@ -1,12 +1,15 @@
-// stores/plannerStore.js
 import { defineStore } from 'pinia'
 
+interface PlannerState {
+  activeTab: string
+}
+
 export const usePlannerStore = defineStore('usePlannerStore', {
-  state: () => ({
+  state: (): PlannerState => ({
     activeTab: 'createVisits',
   }),
   actions: {
-    switchTab(tab) {
+    switchTab(tab: string) {
       this.activeTab = tab
     },
   },

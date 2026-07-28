@@ -1,12 +1,15 @@
-// stores/settingsStore.js
 import { defineStore } from 'pinia'
 
+interface SettingsState {
+  activeSection: string
+}
+
 export const useSettingsStore = defineStore('useSettingsStore', {
-  state: () => ({
-    activeSection: 'createUser', // default section
+  state: (): SettingsState => ({
+    activeSection: 'createUser',
   }),
   actions: {
-    switchSection(section) {
+    switchSection(section: string) {
       this.activeSection = section
     },
   },

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler", // Changed from "Node" to "bundler"
+    "allowSyntheticDefaultImports": true,
+    "strict": true, // Keeps your NEW TypeScript files strictly typed
+    "jsx": "preserve",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "lib": ["ESNext", "DOM"],
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    // --- CRUCIAL FOR INCREMENTAL MIGRATION ---
+    "allowJs": true, // Allows JS files to be compiled alongside TS
+    "checkJs": false // Tells TS NOT to type-check your existing JS files
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": ["node_modules"]
+}

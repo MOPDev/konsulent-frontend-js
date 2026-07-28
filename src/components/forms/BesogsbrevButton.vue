@@ -9,17 +9,19 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
 
-const props = defineProps({
-	visitId: { required: true },
-})
+interface Props {
+	visitId: string | number
+}
+
+const props = defineProps<Props>()
 
 const loading = ref(false)
-const error = ref(null)
+const error = ref<string | null>(null)
 
 async function fetchAndPrint() {
 	loading.value = true
@@ -46,18 +48,19 @@ async function fetchAndPrint() {
 			iframe.src = url
 			document.body.appendChild(iframe)
 			iframe.onload = () => {
-				iframe.contentWindow.focus()
-				iframe.contentWindow.print()
+				iframe.contentWindow?.focus()
+				iframe.contentWindow?.print()
 				setTimeout(() => {
 					document.body.removeChild(iframe)
 					URL.revokeObjectURL(url)
 				}, 1000)
 			}
 		}
-	} catch (err) {
+	} catch (err: unknown) {
 		errorApi.logError(err)
-		if (err.response?.data instanceof Blob) {
-			const text = await err.response.data.text()
+		const axiosErr = err as { response?: { data: Blob } }
+		if (axiosErr.response?.data instanceof Blob) {
+			const text = await axiosErr.response.data.text()
 			try {
 				error.value = JSON.parse(text).error
 			} catch {

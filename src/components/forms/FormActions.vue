@@ -34,19 +34,28 @@
 	</button>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import FileUpload from '@/components/forms/FileUpload.vue'
 
-const props = defineProps({
-	formData: { type: Object, required: true },
-	visitId: { type: [Number, String], required: true },
-	isSubmitting: { type: Boolean, default: false },
-	imageTitle: { type: String, default: 'Billede af bilen og postkassen' },
-	fileUploadId: { type: String, default: 'car-photo' },
+interface Props {
+	formData: any
+	visitId: number | string
+	isSubmitting?: boolean
+	imageTitle?: string
+	fileUploadId?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	isSubmitting: false,
+	imageTitle: 'Billede af bilen og postkassen',
+	fileUploadId: 'car-photo',
 })
 
-const emit = defineEmits(['images', 'remove-image'])
+const emit = defineEmits<{
+	(e: 'images', value: Event): void
+	(e: 'remove-image', index: number): void
+}>()
 
 const fd = computed({
 	get: () => props.formData,

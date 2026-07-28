@@ -14,7 +14,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useSettingsStore } from '@/stores/settingsStore'
 import CreateUser from '@/components/CreateUser.vue'
 import UpdateUser from '@/components/UpdateUser.vue'

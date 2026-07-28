@@ -208,15 +208,15 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 
-const props = defineProps({
-	formData: { type: Object, required: true },
-})
+const props = defineProps<{
+	formData: Record<string, unknown>
+}>()
 
-const fd = computed({
+const fd = computed<any>({
 	get: () => props.formData,
 	set: () => {},
 })
@@ -227,7 +227,7 @@ const formattedOdometer = computed({
 		if (val === null || val === undefined || val === '') return ''
 		return new Intl.NumberFormat('da-DK').format(val)
 	},
-	set(str) {
+	set(str: string) {
 		const num = parseInt(str.replace(/\./g, ''), 10)
 		fd.value.asset.odometer_km = isNaN(num) ? null : num
 	},

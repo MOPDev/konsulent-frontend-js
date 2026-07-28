@@ -9,7 +9,7 @@
 					</div>
 					<div class="card-body">
 						<p class="text-muted">
-							Velkommen til din Profil, {{ authStore.user.name }}
+							Velkommen til din Profil, {{ authStore.user?.name }}
 						</p>
 
 						<!-- User Info Display/Edit -->
@@ -18,7 +18,7 @@
 								<tbody>
 									<tr>
 										<th class="text-muted" style="width: 140px">Brugernavn</th>
-										<td>{{ authStore.user.username }}</td>
+										<td>{{ authStore.user?.username }}</td>
 										<td class="text-end">
 											<button
 												class="btn btn-sm btn-outline-primary"
@@ -30,19 +30,19 @@
 									</tr>
 									<tr>
 										<th class="text-muted">Navn</th>
-										<td>{{ authStore.user.name }}</td>
+										<td>{{ authStore.user?.name }}</td>
 									</tr>
 									<tr>
 										<th class="text-muted">Initials</th>
-										<td>{{ authStore.user.initials }}</td>
+										<td>{{ authStore.user?.initials }}</td>
 									</tr>
 									<tr>
 										<th class="text-muted">Email</th>
-										<td>{{ authStore.user.email || 'Ikke angivet' }}</td>
+										<td>{{ authStore.user?.email || 'Ikke angivet' }}</td>
 									</tr>
 									<tr>
 										<th class="text-muted">Telefon</th>
-										<td>{{ authStore.user.phone || 'Ikke angivet' }}</td>
+										<td>{{ authStore.user?.phone || 'Ikke angivet' }}</td>
 									</tr>
 								</tbody>
 							</table>
@@ -165,23 +165,29 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth.js'
-import api from '@/utils/axios.js'
+import { useAuthStore } from '@/stores/auth'
+import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
-import { useRouter } from 'vue-router' // ✅ add this
+import { useRouter } from 'vue-router'
 
-const loading = ref(false)
+const loading = ref<boolean>(false)
 const authStore = useAuthStore()
-const router = useRouter() // ✅ add this
-const editing = ref(false)
-const error = ref(false)
-const feedback = ref('')
-const newPassword = ref('')
-const newPasswordCheck = ref('')
+const router = useRouter()
+const editing = ref<boolean>(false)
+const error = ref<boolean>(false)
+const feedback = ref<string>('')
+const newPassword = ref<string>('')
+const newPasswordCheck = ref<string>('')
 
-const editedUser = reactive({
+const editedUser = reactive<{
+	username: string
+	name: string
+	initials: string
+	email: string
+	phone: string
+}>({
 	username: '',
 	name: '',
 	initials: '',
@@ -190,11 +196,18 @@ const editedUser = reactive({
 })
 
 function startEdit() {
-	editedUser.username = authStore.user.username || ''
-	editedUser.name = authStore.user.name || ''
-	editedUser.initials = authStore.user.initials || ''
-	editedUser.email = authStore.user.email || ''
-	editedUser.phone = authStore.user.phone || ''
+	const u = authStore.user as {
+		username?: string
+		name?: string
+		initials?: string
+		email?: string
+		phone?: string
+	} | null
+	editedUser.username = u?.username ?? ''
+	editedUser.name = u?.name ?? ''
+	editedUser.initials = u?.initials ?? ''
+	editedUser.email = u?.email ?? ''
+	editedUser.phone = u?.phone ?? ''
 	editing.value = true
 }
 
@@ -203,15 +216,16 @@ function cancelEdit() {
 	feedback.value = ''
 }
 
-const passEqual = computed(
+const passEqual = computed<boolean>(
 	() => newPassword.value === newPasswordCheck.value && newPassword.value.length > 0,
 )
 
-function validateStrength(pwd, strength) {
+function validateStrength(pwd: string, strength: number): boolean {
 	if (strength == 1) return true
 	if (strength == 2) {
 		return pwd.length >= 12 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /\d/.test(pwd)
 	}
+	return false
 }
 
 async function UpdatePassword() {
@@ -232,12 +246,10 @@ async function UpdatePassword() {
 
 	try {
 		const userId = authStore.user?.ID
-		await api.patch(`/users/${userId}/password`, {
-			new_password: newPassword.value,
-		})
+		if (userId) await usersApi.changePassword(userId, newPassword.value)
 		authStore.logout()
 		window.location.reload()
-	} catch (err) {
+	} catch (err: any) {
 		errorApi.log('Error updating password: ' + err.message)
 		const msg =
 			err.response?.data?.error || err.response?.data?.message || 'Kodeordsopdatering fejlede'
@@ -251,18 +263,20 @@ async function UpdatePassword() {
 async function updateDetails() {
 	try {
 		const userId = authStore.user?.ID
-		await api.patch(`/users/${userId}`, {
-			username: editedUser.username,
-			name: editedUser.name,
-			initials: editedUser.initials,
-			email: editedUser.email || null,
-			phone: editedUser.phone || null,
-		})
+		if (userId) {
+			await usersApi.update(userId, {
+				username: editedUser.username,
+				name: editedUser.name,
+				initials: editedUser.initials,
+				email: editedUser.email || null,
+				phone: editedUser.phone || null,
+			})
+		}
 		authStore.fetchUser()
 		feedback.value = 'Profil opdateret!'
 		error.value = false
 		editing.value = false
-	} catch (err) {
+	} catch (err: any) {
 		errorApi.log('Error updating user details: ' + err.message)
 		feedback.value =
 			'Noget gik galt ved opdatering: ' + (err.response?.data?.error || err.message)
@@ -272,7 +286,7 @@ async function updateDetails() {
 
 async function logout() {
 	await authStore.logout()
-	router.push('/login') // ✅ navigate here, not in the store
+	router.push('/login')
 }
 </script>
 

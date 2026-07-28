@@ -6,21 +6,22 @@
 	<p v-if="error" class="error">{{ error }}</p>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { ref, computed, type ComputedRef } from 'vue'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
+import type { VisitWithoutUserOrDebitors } from '@/schemas/index.js'
 
-const props = defineProps({
-	visitIds: { type: Array, required: true },
-})
+const props = defineProps<{
+	visitIds: VisitWithoutUserOrDebitors[]
+}>()
 
 const loading = ref(false)
-const error = ref(null)
+const error = ref<string | null>(null)
 const elapsed = ref(0)
 
 // ponytail: 1.5s per visit is a rough guess for docx→pdf; tune if conversions are faster
-const estimated = computed(() =>
+const estimated: ComputedRef<number> = computed(() =>
 	Math.max(0, Math.ceil(props.visitIds.length * 1.5 - elapsed.value)),
 )
 
@@ -31,8 +32,10 @@ async function printAll() {
 
 	const timer = setInterval(() => elapsed.value++, 1000)
 
+	const activeVisits = props.visitIds.filter((visit) => visit.cancelled !== true)
+
 	try {
-		const ids = props.visitIds.join(',')
+		const ids = activeVisits.map((v) => v.ID).join(',')
 		const response = await api.get(`/visits/besogsbrev/batch?ids=${ids}`, {
 			responseType: 'blob',
 		})

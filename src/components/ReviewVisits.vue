@@ -37,6 +37,8 @@
 					:page-size="100"
 					v-model="selectedVisitIds"
 					@selection-ids-changed="handleSelectionChange"
+					:row-class="(item: any) => item.cancelled ? 'cancelled-row' : undefined"
+					:disable-selection-check="(item: any) => !!item.cancelled"
 				>
 					<template #cell-konsulentName="{ item }">
 						{{ item.konsulentName }}
@@ -58,20 +60,70 @@
 					<template #cell-group_id="{ item }">
 						<span v-if="item.group_id" class="group-badge">{{ item.group_id }}</span>
 					</template>
+					<template #cell-actions="{ item }">
+						<button
+							v-if="!item.cancelled"
+							@click="handleCancel(item)"
+							class="cancel-btn"
+							title="Afmeld besøg"
+						>
+							Afmeld
+						</button>
+						<button
+							v-else
+							@click="handleUncancel(item)"
+							class="uncancel-btn"
+							title="Fortryd afmelding"
+						>
+							Fortryd
+						</button>
+					</template>
 				</DataTable>
 			</div>
 		</div>
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import api from '@/utils/axios'
+import { visitsApi } from '@/api/visits'
 import { errorApi } from '@/utils/axios'
-
 import DataTable from './DataTable.vue'
 
-const columns = [
+interface Column {
+  key: string
+  label: string
+  sortable?: boolean
+  filterable?: boolean
+  copyable?: boolean
+}
+
+interface VisitData {
+  ID: number
+  sagsnr: number
+  address: string
+  visit_date: string
+  visit_time?: string
+  stop_nr?: number
+  group_id?: number | null
+  status?: { ID: number; text: string }
+  status_id?: number
+  konsulentName?: string
+  user?: { name: string }
+  debitors: Array<{ ID: number; name: string }>
+  type: { text: string }
+  visit_response?: { actual_time: string } | null
+  cancelled?: boolean | null
+  [key: string]: unknown
+}
+
+interface VisitGroup {
+  key: string
+  visits: VisitData[]
+  date: string | null
+}
+
+const columns: Column[] = [
 	{ key: 'ID', label: 'Besøgs ID', sortable: true, filterable: true },
 	{ key: 'konsulentName', label: 'Konsulent', sortable: true, filterable: true },
 	{ key: 'sagsnr', label: 'Sags nummer', copyable: true, sortable: true, filterable: true },
@@ -87,26 +139,27 @@ const columns = [
 	{ key: 'type.text', label: 'Type', sortable: true, filterable: true },
 	{ key: 'status', label: 'Status', sortable: false, filterable: true },
 	{ key: 'group_id', label: 'Gruppe', sortable: true, filterable: true },
+	{ key: 'actions', label: '', sortable: false, filterable: false },
 ]
 
-const visits = ref([])
-const selectedVisitIds = ref([])
-const error = ref(null)
-const tableRefs = ref({})
-const expandedGroups = ref(new Set())
+const visits = ref<VisitData[]>([])
+const selectedVisitIds = ref<(number | string)[]>([])
+const error = ref<string | null>(null)
+const tableRefs = ref<Record<string, any>>({})
+const expandedGroups = ref<Set<string>>(new Set())
 
-const setTableRef = (key, el) => {
+const setTableRef = (key: string, el: any) => {
 	if (el) tableRefs.value[key] = el
 }
 
-const groupedVisits = computed(() => {
-	const groups = {}
-	const other = []
+const groupedVisits = computed<VisitGroup[]>(() => {
+	const groups: Record<string, VisitGroup> = {}
+	const other: VisitData[] = []
 
 	visits.value.forEach((visit) => {
 		if (visit.group_id && visit.group_id !== 0) {
 			const key = String(visit.group_id)
-			if (!groups[key]) groups[key] = { key, visits: [] }
+			if (!groups[key]) groups[key] = { key, visits: [], date: null }
 			groups[key].visits.push(visit)
 		} else {
 			other.push(visit)
@@ -115,15 +168,15 @@ const groupedVisits = computed(() => {
 
 	Object.values(groups).forEach((group) => {
 		group.visits.sort((a, b) => (a.stop_nr ?? 0) - (b.stop_nr ?? 0))
-		group.date = group.visits[0]?.visit_date
+		group.date = group.visits[0]?.visit_date ?? null
 	})
 
-	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date) - new Date(a.date))
+	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
 
 	if (other.length > 0) {
 		other.sort((a, b) => {
-			const dateA = new Date(a.visit_date)
-			const dateB = new Date(b.visit_date)
+			const dateA = new Date(a.visit_date).getTime()
+			const dateB = new Date(b.visit_date).getTime()
 			if (dateB - dateA !== 0) return dateB - dateA
 			return (b.visit_time || '').localeCompare(a.visit_time || '')
 		})
@@ -137,36 +190,36 @@ onMounted(fetchVisits)
 
 async function fetchVisits() {
 	try {
-		const response = await api.get('/visits/byStatus', { params: { status: 4 } })
-		visits.value = (response.data.visit || []).map((visit) => ({
+		const result = await visitsApi.getByStatus(4)
+		visits.value = (result || []).map((visit: any) => ({
 			...visit,
 			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
 		}))
 		error.value = null
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error fetching visits:', err)
 		error.value = 'Fejl ved hentning af besøg: ' + err.message
 		errorApi.log('Error fetching visits: ' + err.message)
 	}
 }
 
-function formatAddress(address) {
+function formatAddress(address: string): string {
 	if (!address) return ''
 	return address.replace(/\r?\n/g, ', ')
 }
 
-function formatDate(date) {
+function formatDate(date: string | null | undefined): string {
 	if (!date) return ''
 	const d = new Date(date)
-	if (isNaN(d)) return ''
+	if (isNaN(d.getTime())) return ''
 	return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
 }
 
-const handleSelectionChange = (selectedIds) => {
+const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisitIds.value = selectedIds
 }
 
-function toggleGroup(key) {
+function toggleGroup(key: string) {
 	if (expandedGroups.value.has(key)) {
 		expandedGroups.value.delete(key)
 	} else {
@@ -175,44 +228,61 @@ function toggleGroup(key) {
 	expandedGroups.value = new Set(expandedGroups.value)
 }
 
-function moveToStatus5() {
+async function handleCancel(visit: any) {
+	error.value = null
+	try {
+		await visitsApi.cancelVisit(visit.ID)
+		visit.cancelled = true
+	} catch (err: any) {
+		console.error('Error cancelling visit:', err)
+		error.value = 'Fejl ved afmelding af besøg'
+		errorApi.logError(err)
+	}
+}
+
+async function handleUncancel(visit: any) {
+	error.value = null
+	try {
+		await visitsApi.uncancelVisit(visit.ID)
+		visit.cancelled = false
+	} catch (err: any) {
+		console.error('Error uncancelling visit:', err)
+		error.value = 'Fejl ved fortryd af afmelding'
+		errorApi.logError(err)
+	}
+}
+
+async function moveToStatus5() {
 	if (!selectedVisitIds.value.length) {
 		error.value = 'Vælg mindst et besøg.'
 		return
 	}
 	error.value = null
 
-	const visitsToMove = [...selectedVisitIds.value]
-
-	api.post('/visit/reviewed', { reviewed_ids: visitsToMove })
-		.then((response) => {
-			const result = response.data
-			const errors = result.filter((item) => item.err !== 'no error')
-			if (errors.length) {
-				error.value = errors.map((item) => `ID ${item.id}: ${item.err}`).join('; ')
-			} else {
-				selectedVisitIds.value = []
-				Object.values(tableRefs.value).forEach((t) => t?.clearSelection())
-				error.value = null
-			}
-			fetchVisits()
-		})
-		.catch((err) => {
-			console.error('Error moving visits to status 5:', err.request?.response)
-			error.value = 'Kunne ikke importere besøg: ' + (err.request?.response || err.message)
-		})
+	try {
+		const result = (await visitsApi.markReviewed(selectedVisitIds.value.map((id) => Number(id)))) as any[]
+		const errors = result.filter((item: any) => item.err !== 'no error')
+		if (errors.length) {
+			error.value = errors.map((item: any) => `ID ${item.id}: ${item.err}`).join('; ')
+		} else {
+			selectedVisitIds.value = []
+			Object.values(tableRefs.value).forEach((t: any) => t?.clearSelection())
+			error.value = null
+		}
+		fetchVisits()
+	} catch (err: any) {
+		console.error('Error moving visits to status 5:', err.request?.response)
+		error.value = 'Kunne ikke importere besøg: ' + (err.request?.response || err.message)
+	}
 }
 
 function requestPdfs() {
-	selectedVisitIds.value.forEach((id) => getPdf(id))
+	selectedVisitIds.value.forEach((id) => getPdf(Number(id)))
 }
 
-const getPdf = async (id) => {
+const getPdf = async (id: number) => {
 	try {
-		const response = await api.get('/visit/pdf', {
-			params: { id },
-			responseType: 'blob',
-		})
+		const response = await visitsApi.downloadPdf(id)
 
 		const disposition = response.headers['content-disposition']
 		let filename = 'visit.pdf'
@@ -228,7 +298,7 @@ const getPdf = async (id) => {
 		link.click()
 		document.body.removeChild(link)
 		window.URL.revokeObjectURL(url)
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error fetching PDF:', err)
 		error.value = 'Fejl ved hentning af PDF'
 		errorApi.logError(err)
@@ -316,6 +386,50 @@ const getPdf = async (id) => {
 	border-radius: 0.25rem;
 	font-size: 0.75rem;
 	font-weight: 500;
+}
+
+.cancel-btn {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	border: 1px solid #ef4444;
+	background: white;
+	color: #ef4444;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+	background-color: #fef2f2;
+}
+
+.uncancel-btn {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	border: 1px solid #6b7280;
+	background: white;
+	color: #6b7280;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.uncancel-btn:hover {
+	background-color: #f3f4f6;
+}
+
+:deep(.cancelled-row) {
+	text-decoration: line-through;
+	color: #9ca3af;
+	background-color: #fef2f2 !important;
+}
+
+:deep(.cancelled-row) td {
+	color: #9ca3af;
+}
+
+:deep(.cancelled-row:hover) {
+	background-color: #fef2f2 !important;
 }
 
 @media (max-width: 480px) {

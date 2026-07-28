@@ -125,9 +125,14 @@
 					:key="d.ID"
 					type="button"
 					class="btn-badge me-1"
-					@click="fd.contact.corrected_tlf = d.phone || d.phone_work"
+					@click="
+						fd.contact.corrected_tlf = String(d.phone || d.phone_work || '').replace(
+							/\.0$/,
+							'',
+						)
+					"
 				>
-					Brug: {{ d.phone || d.phone_work }}
+					Brug: {{ String(d.phone || d.phone_work || '').replace(/\.0$/, '') }}
 				</button>
 			</div>
 			<input
@@ -162,23 +167,23 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
+import { DebitorWithoutVisits } from '@/schemas/index'
 
-const props = defineProps({
-	formData: { type: Object, required: true },
-	showWorkerMet: { type: Boolean, default: false },
-	debitors: { type: Array, default: () => [] },
-})
+const props = defineProps<{
+	formData: Record<string, unknown>
+	showWorkerMet: boolean
+	debitors: DebitorWithoutVisits[]
+}>()
 
-const fd = computed({
+const fd = computed<any>({
 	get: () => props.formData,
 	set: () => {},
 })
 
 const showletterDelivered = computed(() => {
-	// showWorkerMet means at at least one debitor is a company, so we only show the letter delivered question if no debitor, other, or worker was met
 	if (props.showWorkerMet) {
 		return (
 			fd.value.contact.debitor_met === false &&
@@ -201,7 +206,7 @@ const emailDebitors = computed(() => {
 const phonePlaceholder = computed(() => {
 	const first = phoneDebitors.value[0]
 	if (first) {
-		return `Nuværende: ${first.phone || first.phone_work}`
+		return `Nuværende: ${String(first.phone || first.phone_work || '').replace(/\.0$/, '')}`
 	}
 	return 'Nyt/rettet tlf. nummer'
 })

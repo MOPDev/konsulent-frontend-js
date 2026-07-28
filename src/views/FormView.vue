@@ -8,7 +8,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -18,7 +18,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -28,7 +28,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -38,7 +38,7 @@
 			v-model:formData="formData"
 			:visitData="visitData"
 			:docBlob="docBlob"
-			@submit="() => submitForm(visitData.ID)"
+			@submit="() => submitForm(visitData!.ID)"
 			@images="handleImageUpload"
 			@remove-image="removeImageAt"
 			:isSubmitting="isSubmitting"
@@ -51,7 +51,7 @@
     --></div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -62,19 +62,99 @@ import LetterForm from '@/components/forms/LetterForm.vue'
 
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
+import { visitsApi, type VisitWithDebitors } from '@/api/visits'
+
+interface ImageItem {
+	file: File
+	preview: string
+	name: string
+}
+
+interface OtherAsset {
+	regnr: string
+	image?: { file: File }
+	[key: string]: unknown
+}
+
+interface FormData {
+	actual_latitude: string | null
+	actual_longitude: string | null
+	pos_accuracy: string | null
+	contact: {
+		mailbox_name: string
+		letter_delivered: boolean | null
+		debitor_met: boolean | null
+		other_met: boolean | null
+		other_title: string
+		worker_met: boolean | null
+		worker_title: string
+		corrected_tlf: string
+		corrected_mail: string
+	}
+	payment: {
+		ReceivedPayment: boolean | null
+		PaymentAmount: number | null
+		PaymentMethod: string
+	}
+	asset: {
+		asset_seen: boolean | null
+		asset_accessible: boolean | null
+		asset_status: string
+		asset_status_note: string
+		asset_cleanliness: string
+		asset_cleanliness_note: string
+		asset_confirmed_owner: boolean | null
+		asset_keys_delivered: boolean | null
+		sf_signed: boolean | null
+		odometer_km: number | null
+		contract_type: string
+		is_seized: boolean | null
+		handover_strategy: string
+		handover_strategy_note: string
+		transport_provider: string
+		final_vehicle_location: string
+		final_vehicle_location_note: string
+	}
+	property: {
+		property_type: string | null
+		OvergrownGarden: boolean | null
+		MailboxFull: boolean | null
+		BrokenWindows: boolean | null
+		AbandonedVehicles: boolean | null
+		TrashOverflown: boolean | null
+		ForsaleSign: boolean | null
+	}
+	monetary: {
+		civil_status: string
+		children_over_18: number | null
+		children_under_18: number | null
+		has_work: boolean | null
+		position: string
+		net_salary_min: number | null
+		net_salary_max: number | null
+		income_payment_min: number | null
+		income_payment_max: number | null
+		monthly_disposable_min: number | null
+		monthly_disposable_max: number | null
+		debt_amount_paid: number | null
+	}
+	other_assets: OtherAsset[]
+	images: ImageItem[]
+	comments: string
+}
 
 const router = useRouter()
 const route = useRoute()
 const ID = Number(route.params.id)
-const visitData = ref(null)
-const isSubmitting = ref(false)
-const isCapturingLocation = ref(false)
-const debtData = ref(null)
-const restgadoAntagetVal = ref(0)
-const startTime = ref(null)
-const docBlob = ref(null) // Store the file here
+const visitData = ref<(VisitWithDebitors & { debt?: any }) | null>(null)
+const isSubmitting = ref<boolean>(false)
+const isCapturingLocation = ref<boolean>(false)
+const debtData = ref<any>(null)
+const restgadoAntagetVal = ref<number>(0)
+const startTime = ref<Date | null>(null)
+const docBlob = ref<Blob | null>(null)
 
-const formData = reactive({
+const formData = reactive<FormData>({
 	actual_latitude: null,
 	actual_longitude: null,
 	pos_accuracy: null,
@@ -141,10 +221,9 @@ const formData = reactive({
 	comments: '',
 })
 
-// ponytail: updated watches to react to new nested formData layout
 watch(
 	() => formData.asset.asset_seen,
-	(newVal) => {
+	(newVal: boolean | null) => {
 		if (newVal === false || newVal === null) {
 			formData.asset.odometer_km = null
 			formData.asset.asset_accessible = null
@@ -158,7 +237,7 @@ watch(
 
 watch(
 	() => formData.contact.debitor_met,
-	(newVal) => {
+	(newVal: boolean | null) => {
 		if (newVal === false || newVal === null) {
 			formData.monetary.civil_status = ''
 			formData.monetary.children_under_18 = null
@@ -174,7 +253,7 @@ watch(
 
 watch(
 	() => formData.monetary.has_work,
-	(newVal) => {
+	(newVal: boolean | null) => {
 		if (newVal === false || newVal === null) {
 			formData.monetary.position = ''
 			formData.monetary.net_salary_min = null
@@ -185,7 +264,7 @@ watch(
 
 watch(
 	() => formData.payment.ReceivedPayment,
-	(newVal) => {
+	(newVal: boolean | null) => {
 		if (newVal === false || newVal === null) {
 			formData.payment.PaymentAmount = null
 			formData.payment.PaymentMethod = ''
@@ -195,7 +274,7 @@ watch(
 
 watch(
 	() => formData.asset.is_seized,
-	(newVal) => {
+	(newVal: boolean | null) => {
 		if (newVal === false || newVal === null) {
 			formData.asset.handover_strategy = ''
 			formData.asset.handover_strategy_note = ''
@@ -204,7 +283,7 @@ watch(
 	},
 )
 
-function removeImageAt(i) {
+function removeImageAt(i: number) {
 	const [removed] = formData.images.splice(i, 1)
 	if (removed?.preview) {
 		try {
@@ -220,44 +299,39 @@ onMounted(async () => {
 	startTime.value = new Date()
 
 	try {
-		const response = await api.get('/visits/byId', {
-			params: { id: ID },
-		})
+		visitData.value = await visitsApi.getById(ID)
 		const debt = await api.get('/visits/debt', { params: { VisitId: ID } })
 
-		visitData.value = response.data.visit
-
-		visitData.value.debt = debt.data[0]
+		if (visitData.value) visitData.value.debt = debt.data[0]
 		debtData.value = debt
 
 		await getLocation()
 
-		loadDocument(ID).catch((err) => console.error('Doc load failed:', err))
-	} catch (error) {
+		loadDocument(ID).catch((err: any) => console.error('Doc load failed:', err))
+	} catch (error: any) {
 		console.error('Error fetching visit:', error)
 		errorApi.log('Error fetching visit: ' + error.message)
-		// Handle error appropriately
 	}
 
 	const antaget = parseFloat(debtData.value?.RestgeldAntaget)
 	restgadoAntagetVal.value = antaget === 0 ? debtData.value?.RestgeldVedBrev : antaget
 })
 
-const loadDocument = async (ID) => {
+const loadDocument = async (ID: number) => {
 	try {
 		const response = await api.get('/visits/document', {
 			params: { VisitId: ID },
-			responseType: 'blob', // Critical
+			responseType: 'blob',
 		})
-		docBlob.value = response.data // Store the blob
-	} catch (err) {
+		docBlob.value = response.data
+	} catch (err: any) {
 		errorApi.logError(err)
 		console.error('Document loading failed', err)
 		errorApi.log('Document loading failed: ' + err.message)
 	}
 }
 
-function fixMinMax(min, max) {
+function fixMinMax(min: number | null, max: number | null): [number | null, number | null] {
 	if (min !== null && max !== null) {
 		if (min > max) {
 			return [max, min]
@@ -267,7 +341,7 @@ function fixMinMax(min, max) {
 	return [min, max]
 }
 
-async function submitForm(visitId) {
+async function submitForm(visitId: number) {
 	if (formData.asset.asset_seen && formData.images.length === 0) {
 		alert('Du skal tilføje mindst ét billede når køretøjet er til stede.')
 		return
@@ -275,7 +349,7 @@ async function submitForm(visitId) {
 	isSubmitting.value = true
 	try {
 		const now = new Date()
-		const duration = now - startTime.value
+		const duration = (now as any) - (startTime.value as any)
 
 		if (visitData.value?.type?.ID === 1) {
 			formData.asset.contract_type = 'Købekontrakt'
@@ -285,7 +359,9 @@ async function submitForm(visitId) {
 			formData.asset.contract_type = 'Blanco'
 		}
 
-		// Verify that the min values are not greater than the max values for monetary fields
+		// verify that the min values are not greater than the max values for monetary fields
+		// salary
+		// verify that the min values are not greater than the max values for monetary fields
 		// salary
 		;[formData.monetary.net_salary_min, formData.monetary.net_salary_max] = fixMinMax(
 			formData.monetary.net_salary_min,
@@ -325,9 +401,9 @@ async function submitForm(visitId) {
 			for (let i = 0; i < formData.images.length; i++) {
 				const { file } = formData.images[i]
 				const fd = new FormData()
-				fd.append('visit_response_id', data.ID)
+				fd.append('visit_response_id', String(data.ID))
 				fd.append('image', file)
-				fd.append('sequence', i + 1)
+				fd.append('sequence', String(i + 1))
 				const url = `/visit-response/${data.ID}/images`
 				await api.post(url, fd, { headers: { 'Content-Type': undefined } })
 			}
@@ -335,7 +411,7 @@ async function submitForm(visitId) {
 
 		if (data.other_assets?.length) {
 			for (const asset of data.other_assets) {
-				const match = formData.other_assets.find((a) => a.regnr === asset.regnr)
+				const match = formData.other_assets.find((a: OtherAsset) => a.regnr === asset.regnr)
 				if (!match?.image?.file) continue
 				const fd = new FormData()
 				fd.append('image', match.image.file)
@@ -344,14 +420,12 @@ async function submitForm(visitId) {
 				})
 			}
 		}
-		// everything went well, confirm to the backend that it did, and then we navigate back to the auditor's dashboard
 		await api.post(`/visit-response/${data.ID}/complete`)
 		sendBack()
-	} catch (err) {
+	} catch (err: any) {
 		console.error('Error submitting form:', err)
 		await errorApi.log('Form submission failed: ' + err.message)
 		alert('Noget gik galt: ' + err.message + ' Prøv igen.')
-		// ponytail: stay on the form so formData survives, user can retry/edit and resubmit
 	} finally {
 		isSubmitting.value = false
 	}
@@ -359,7 +433,6 @@ async function submitForm(visitId) {
 
 const getLocation = () => {
 	console.log('getting location')
-	// Fallback coordinates (e.g., a default location like Copenhagen, Denmark)
 	const fallbackLocation = {
 		latitude: '0',
 		longitude: '0',
@@ -367,7 +440,6 @@ const getLocation = () => {
 	}
 
 	if (!navigator.geolocation) {
-		//alert('Geolocation ikke understøttet')
 		formData.actual_latitude = fallbackLocation.latitude
 		formData.actual_longitude = fallbackLocation.longitude
 		formData.pos_accuracy = fallbackLocation.accuracy
@@ -375,7 +447,6 @@ const getLocation = () => {
 	}
 
 	if (!window.isSecureContext) {
-		//alert('Geolocation kræver en sikker forbindelse (HTTPS). Fallback placering bruges.')
 		formData.actual_latitude = fallbackLocation.latitude
 		formData.actual_longitude = fallbackLocation.longitude
 		formData.pos_accuracy = fallbackLocation.accuracy
@@ -383,8 +454,8 @@ const getLocation = () => {
 	}
 
 	isCapturingLocation.value = true
-	let bestPosition
-	let watchId = null
+	let bestPosition: GeolocationPosition | null = null
+	let watchId: number | null = null
 
 	const finish = () => {
 		if (watchId !== null) navigator.geolocation.clearWatch(watchId)
@@ -398,17 +469,12 @@ const getLocation = () => {
 			formData.pos_accuracy = fallbackLocation.accuracy
 		}
 		isCapturingLocation.value = false
-
-		//console.log(formData.actual_latitude)
-		//console.log(formData.actual_longitude)
-		//console.log(formData.pos_accuracy)
 	}
 
 	watchId = navigator.geolocation.watchPosition(
 		(position) => {
 			if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
 				bestPosition = position
-				// Stop if accuracy is below 15 meters (customize as needed)
 				if (position.coords.accuracy <= 15) finish()
 			}
 		},
@@ -420,17 +486,16 @@ const getLocation = () => {
 		{ enableHighAccuracy: true },
 	)
 
-	// Force finish after 10 seconds to avoid infinite wait
 	console.log('starting geolocation')
 	setTimeout(finish, 10 * 1000)
 }
 
-// image picker in parent
-function handleImageUpload(e) {
-	const files = Array.from(e.target.files)
+function handleImageUpload(e: unknown) {
+	const target = (e as Event).target as HTMLInputElement
+	const files = Array.from(target.files || [])
 	const maxMB = 50
 	const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
-	files.forEach((file) => {
+	files.forEach((file: File) => {
 		if (!allowed.includes(file.type)) {
 			errorApi.log(`Unsupported file type: ${file.type}`)
 			return
@@ -445,15 +510,14 @@ function handleImageUpload(e) {
 			name: file.name,
 		})
 	})
-	e.target.value = '' // allow same-file reselect
+	target.value = ''
 }
 
-// Revoke object URLs for removed images to avoid leaks
 watch(
-	() => formData.images.map((i) => i.preview),
-	(nv, ov) => {
-		const removed = (ov || []).filter((p) => !nv.includes(p))
-		removed.forEach((p) => {
+	() => formData.images.map((i: ImageItem) => i.preview),
+	(nv: string[], ov: string[] | undefined) => {
+		const removed = (ov || []).filter((p: string) => !nv.includes(p))
+		removed.forEach((p: string) => {
 			try {
 				URL.revokeObjectURL(p)
 			} catch {
@@ -465,8 +529,9 @@ watch(
 )
 
 function sendBack() {
-	const id = visitData.value.user.ID
-
-	router.push(`/auditor/${id}`)
+	const id = visitData.value?.user?.ID
+	if (id) {
+		router.push(`/auditor/${id}`)
+	}
 }
 </script>

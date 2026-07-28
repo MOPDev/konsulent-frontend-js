@@ -17,17 +17,17 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import api from '@/utils/axios'
 
-const username = ref('')
-const password = ref('')
-const errorMessage = ref('')
+const username = ref<string>('')
+const password = ref<string>('')
+const errorMessage = ref<string>('')
 const authStore = useAuthStore()
-const isServerOnline = ref(true)
+const isServerOnline = ref<boolean>(true)
 
 async function handleLogin() {
 	checkServer()
@@ -35,7 +35,6 @@ async function handleLogin() {
 		errorMessage.value = 'Cannot connect to backend. Please try again later.'
 		return
 	}
-	//console.log('Login attempt')
 	errorMessage.value = ''
 	try {
 		await authStore.login({
