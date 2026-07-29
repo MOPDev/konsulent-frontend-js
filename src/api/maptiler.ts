@@ -1,4 +1,3 @@
-//maptiler.ts
 import api from '@/utils/axios'
 
 const tilesBase = `${api.defaults.baseURL}/tiles`
@@ -6,25 +5,20 @@ const geocodeBase = `${api.defaults.baseURL}/geocode`
 
 export type MapStyle =
 	| 'basic-preview'
-	| 'streets'
-	| 'outdoor'
-	| 'satellite'
-	| 'hybrid'
 	| 'basic'
-	| 'topo'
-	| 'winter'
+	| 'streets'
 	| 'dataviz'
-	| 'ocean'
+	| 'topo'
+	| 'hybrid'
+	| 'toner'
+	| 'positron'
+	| 'darkmatter'
 
+/** URL to a MapTiler style JSON for MapLibre GL, proxied through the backend. */
 export const styleUrl = (style: MapStyle = 'basic-preview') =>
 	`${tilesBase}/styles/${style}/style.json`
 
-/** Generic tile URL builder through the backend proxy. */
-export const tileUrl = (path: string) => `${tilesBase}/${path.replace(/^\//, '')}`
-
-// --- Geocoding via Photon (proxied through backend) ---
-
-export interface PhotonFeature {
+export type PhotonFeature = {
 	geometry: { type: 'Point'; coordinates: [number, number] }
 	properties: {
 		name?: string
