@@ -1,4 +1,4 @@
-//VisitMap.vue
+// VisitMap.vue
 <template>
 	<div class="map-wrapper">
 		<div ref="mapContainer" class="map-container" @contextmenu.prevent></div>
@@ -6,14 +6,14 @@
 		<div v-if="mode === 'group'" class="map-toolbar">
 			<button
 				:class="{ active: activeTool === 'pointer' }"
-				:title="activeTool === 'select' ? `Afslut polygon (Enter)` : ''"
+				title="Vælg"
 				@click="setTool('pointer')"
 			>
 				↖
 			</button>
 			<button
 				:class="{ active: activeTool === 'select' }"
-				:title="activeTool === 'select' ? `Tegn polygon for at vælge` : ''"
+				:title="activeTool === 'select' ? 'Tegn polygon for at vælge' : 'Tegn polygon'"
 				@click="setTool('select')"
 			>
 				◇
@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { styleUrl } from '@/api/maptiler'
@@ -39,6 +39,7 @@ interface MapVisit {
 	ID: number
 	latitude: string | number
 	longitude: string | number
+	group_id?: number | null
 	stop_nr?: number | null
 	segment_index?: number | null
 }
@@ -68,39 +69,41 @@ const emit = defineEmits<{
 	'update:modelValue': [ids: number[]]
 }>()
 
-// --- Map lifecycle ---
-
 const mapContainer = ref<HTMLElement>()
 let map: maplibregl.Map | null = null
-
-const visitsSourceId = 'visits-source'
-const visitsLayerId = 'visits-layer'
-const selectedLayerId = 'visits-selected-layer'
-const routeSourceId = 'route-source'
-const routeLayerId = 'route-layer'
-const drawSourceId = 'draw-source'
-const drawFillLayerId = 'draw-fill'
-const drawOutlineLayerId = 'draw-outline'
-const drawVerticesLayerId = 'draw-vertices'
-
-// --- Selection state ---
 
 const activeTool = ref<'pointer' | 'select'>('pointer')
 const isDrawing = ref(false)
 const drawVertices = ref<[number, number][]>([])
-
 const selectedVisitIds = ref<number[]>([...props.modelValue])
 
+const SRC = {
+	visits: 'visits-src',
+	route: 'route-src',
+	draw: 'draw-src',
+	sel: 'sel-src',
+}
+const LAYER = {
+	visits: 'visits-layer',
+	route: 'route-layer',
+	sel: 'sel-layer',
+	drawFill: 'draw-fill',
+	drawLine: 'draw-line',
+	drawVerts: 'draw-verts',
+}
+
+// --- Selection sync ---
 watch(selectedVisitIds, (ids) => {
 	emit('selection-changed', ids)
 	emit('update:modelValue', ids)
-	updateSelectionLayer()
+	if (map?.isStyleLoaded()) updateSelSource()
 })
-
 watch(
 	() => props.modelValue,
 	(ids) => {
-		selectedVisitIds.value = [...ids]
+		if (ids.join(',') !== selectedVisitIds.value.join(',')) {
+			selectedVisitIds.value = [...ids]
+		}
 	},
 )
 
@@ -120,72 +123,95 @@ function clearSelection() {
 	selectedVisitIds.value = []
 }
 
-// --- Drawing ---
-
-function addDrawLayers() {
-	if (!map) return
-
-	const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
-
-	if (!map.getSource(drawSourceId)) {
-		map.addSource(drawSourceId, { type: 'geojson', data: empty })
-
-		map.addLayer({
-			id: drawFillLayerId,
-			type: 'fill',
-			source: drawSourceId,
-			paint: {
-				'fill-color': '#6366f1',
-				'fill-opacity': 0.15,
-			},
-		})
-		map.addLayer({
-			id: drawOutlineLayerId,
-			type: 'line',
-			source: drawSourceId,
-			paint: {
-				'line-color': '#6366f1',
-				'line-width': 2,
-				'line-dasharray': [3, 2],
-			},
-		})
-		map.addLayer({
-			id: drawVerticesLayerId,
-			type: 'circle',
-			source: drawSourceId,
-			paint: {
-				'circle-radius': 5,
-				'circle-color': '#6366f1',
-				'circle-stroke-color': '#ffffff',
-				'circle-stroke-width': 2,
-			},
-			filter: ['==', '$type', 'Point'],
-		})
+function toggleSelection(id: number) {
+	const idx = selectedVisitIds.value.indexOf(id)
+	if (idx === -1) {
+		selectedVisitIds.value = [...selectedVisitIds.value, id]
+	} else {
+		selectedVisitIds.value = selectedVisitIds.value.filter((v) => v !== id)
 	}
 }
 
-function updateDrawSource() {
-	if (!map) return
-	const src = map.getSource(drawSourceId) as maplibregl.GeoJSONSource | undefined
-	if (!src) return
+// --- GeoJSON builders ---
+function toCoord(v: MapVisit): [number, number] | null {
+	const lat = Number(v.latitude)
+	const lng = Number(v.longitude)
+	if (isNaN(lat) || isNaN(lng)) return null
+	return [lng, lat]
+}
 
+function buildVisitsFC(): GeoJSON.FeatureCollection {
+	const features = props.visits
+		.map((v) => {
+			const c = toCoord(v)
+			if (!c) return null
+			return {
+				type: 'Feature' as const,
+				geometry: { type: 'Point' as const, coordinates: c },
+				properties: {
+					id: v.ID,
+					stop_nr: v.stop_nr,
+					segment_index: v.segment_index,
+					group_id: v.group_id,
+				},
+			}
+		})
+		.filter((f): f is GeoJSON.Feature => f !== null)
+	return { type: 'FeatureCollection', features }
+}
+
+function buildRouteFC(): GeoJSON.FeatureCollection | null {
+	const sorted = [...props.visits]
+		.map((v) => ({ v, c: toCoord(v) }))
+		.filter((x): x is { v: MapVisit; c: [number, number] } => x.c !== null)
+		.sort((a, b) => (a.v.stop_nr ?? 0) - (b.v.stop_nr ?? 0))
+
+	if (sorted.length < 2) return null
+
+	return {
+		type: 'FeatureCollection',
+		features: [
+			{
+				type: 'Feature',
+				geometry: {
+					type: 'LineString',
+					coordinates: sorted.map((x) => x.c),
+				},
+				properties: {},
+			},
+		],
+	}
+}
+
+function buildSelFC(): GeoJSON.FeatureCollection {
+	const ids = new Set(selectedVisitIds.value)
+	const features = props.visits
+		.map((v) => {
+			const c = toCoord(v)
+			if (!c || !ids.has(v.ID)) return null
+			return {
+				type: 'Feature' as const,
+				geometry: { type: 'Point' as const, coordinates: c },
+				properties: { id: v.ID, group_id: v.group_id },
+			}
+		})
+		.filter((f): f is GeoJSON.Feature => f !== null)
+	return { type: 'FeatureCollection', features }
+}
+
+function buildDrawFC(): GeoJSON.FeatureCollection {
 	const verts = drawVertices.value
 	const features: GeoJSON.Feature[] = []
 
 	if (verts.length >= 2) {
-		if (isDrawing.value) {
-			features.push({
-				type: 'Feature',
-				geometry: { type: 'LineString', coordinates: verts },
-				properties: {},
-			})
-		} else {
-			features.push({
-				type: 'Feature',
-				geometry: { type: 'Polygon', coordinates: [[...verts, verts[0]]] },
-				properties: {},
-			})
-		}
+		features.push({
+			type: 'Feature',
+			geometry: {
+				type: 'LineString',
+				coordinates: isDrawing.value ? verts : [...verts, verts[0]],
+			},
+			properties: {},
+		})
 	}
 
 	verts.forEach((v) => {
@@ -196,16 +222,15 @@ function updateDrawSource() {
 		})
 	})
 
-	src.setData({ type: 'FeatureCollection', features })
+	return { type: 'FeatureCollection', features }
 }
 
+// --- Point in polygon (ray casting) ---
 function pointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
 	let inside = false
 	for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-		const xi = polygon[i][0],
-			yi = polygon[i][1]
-		const xj = polygon[j][0],
-			yj = polygon[j][1]
+		const [xi, yi] = polygon[i]
+		const [xj, yj] = polygon[j]
 		if (
 			yi > point[1] !== yj > point[1] &&
 			point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi
@@ -216,19 +241,26 @@ function pointInPolygon(point: [number, number], polygon: [number, number][]): b
 	return inside
 }
 
+// --- Drawing ---
+function updateDrawSource() {
+	const src = map?.getSource(SRC.draw) as maplibregl.GeoJSONSource | undefined
+	src?.setData(buildDrawFC())
+}
+
 function runSelection() {
 	const verts = drawVertices.value
-	if (verts.length < 3) return
+	if (verts.length < 3) {
+		cancelDrawing()
+		return
+	}
 
-	const selected = props.visits
-		.filter((v) => {
-			const pt: [number, number] = [Number(v.longitude), Number(v.latitude)]
-			return pointInPolygon(pt, verts)
-		})
-		.map((v) => v.ID)
+	const selected = props.visits.filter((v) => {
+		const c = toCoord(v)
+		return c && pointInPolygon(c, verts)
+	})
 
 	const existing = new Set(selectedVisitIds.value)
-	selected.forEach((id) => existing.add(id))
+	selected.forEach((v) => existing.add(v.ID))
 	selectedVisitIds.value = Array.from(existing)
 
 	cancelDrawing()
@@ -240,8 +272,8 @@ function handleMapClick(e: maplibregl.MapMouseEvent & { originalEvent: MouseEven
 	if (!isDrawing.value) {
 		isDrawing.value = true
 		drawVertices.value = [[e.lngLat.lng, e.lngLat.lat]]
-		addDrawLayers()
 		updateDrawSource()
+		updateCursor()
 		return
 	}
 
@@ -258,63 +290,85 @@ function handleMapClick(e: maplibregl.MapMouseEvent & { originalEvent: MouseEven
 	updateDrawSource()
 }
 
-function handleMapDblClick(e: maplibregl.MapMouseEvent & { originalEvent: MouseEvent }) {
-	if (activeTool.value !== 'select' || !isDrawing.value) return
-	e.originalEvent.preventDefault()
-	runSelection()
-}
-
 function finishDrawing() {
-	if (drawVertices.value.length >= 2) runSelection()
+	if (drawVertices.value.length >= 3) runSelection()
+	else cancelDrawing()
 }
 
 function cancelDrawing() {
 	isDrawing.value = false
 	drawVertices.value = []
-	if (map && map.getSource(drawSourceId)) {
-		;(map.getSource(drawSourceId) as maplibregl.GeoJSONSource).setData({
-			type: 'FeatureCollection',
-			features: [],
-		})
+	updateDrawSource()
+	updateCursor()
+}
+
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === 'Escape') cancelDrawing()
+	else if (e.key === 'Enter' && isDrawing.value) finishDrawing()
+}
+
+// --- Map setup ---
+// ponytail: `any` avoids massive TS friction with maplibre's strictly typed layer specs.
+function ensureLayer(id: string, spec: any) {
+	if (!map) return
+	if (map.getLayer(id)) return
+	map.addLayer({ id, ...spec })
+}
+
+function emptyFC(): GeoJSON.FeatureCollection {
+	return { type: 'FeatureCollection', features: [] }
+}
+
+function ensureSource(id: string, data: GeoJSON.FeatureCollection | GeoJSON.Feature) {
+	if (!map) return
+	if (map.getSource(id)) {
+		;(map.getSource(id) as maplibregl.GeoJSONSource).setData(data)
+	} else {
+		map.addSource(id, { type: 'geojson', data })
 	}
 }
 
-// --- Selection layer ---
-
-function updateSelectionLayer() {
+function addBaseLayers() {
 	if (!map || !map.isStyleLoaded()) return
 
-	const ids = selectedVisitIds.value
-	const features = props.visits
-		.filter((v) => ids.includes(v.ID) && v.latitude && v.longitude)
-		.map((v) => ({
-			type: 'Feature' as const,
-			geometry: {
-				type: 'Point' as const,
-				coordinates: [Number(v.longitude), Number(v.latitude)],
-			},
-			properties: { id: v.ID },
-		}))
+	const visitsFC = buildVisitsFC()
+	const routeFC = props.showRoute ? buildRouteFC() : null
 
-	if (map.getSource('selected-source')) {
-		;(map.getSource('selected-source') as maplibregl.GeoJSONSource).setData({
-			type: 'FeatureCollection',
-			features,
-		})
-		return
-	}
-
-	if (!features.length) return
-
-	map.addSource('selected-source', {
-		type: 'geojson',
-		data: { type: 'FeatureCollection', features },
+	ensureSource(SRC.visits, visitsFC)
+	ensureLayer(LAYER.visits, {
+		type: 'circle',
+		source: SRC.visits,
+		paint: {
+			'circle-radius': 8,
+			'circle-color': '#3b82f6',
+			'circle-stroke-color': '#ffffff',
+			'circle-stroke-width': 2,
+		},
 	})
 
-	map.addLayer({
-		id: selectedLayerId,
+	ensureSource(SRC.route, routeFC ?? emptyFC())
+	if (props.showRoute && routeFC) {
+		ensureLayer(LAYER.route, {
+			type: 'line',
+			source: SRC.route,
+			paint: {
+				'line-color': '#6366f1',
+				'line-width': 3,
+				'line-opacity': 0.7,
+				'line-dasharray': [2, 2],
+			},
+		})
+		map.setLayoutProperty(LAYER.route, 'visibility', 'visible')
+	} else {
+		if (map.getLayer(LAYER.route)) {
+			map.setLayoutProperty(LAYER.route, 'visibility', 'none')
+		}
+	}
+
+	ensureSource(SRC.sel, buildSelFC())
+	ensureLayer(LAYER.sel, {
 		type: 'circle',
-		source: 'selected-source',
+		source: SRC.sel,
 		paint: {
 			'circle-radius': 10,
 			'circle-color': '#f59e0b',
@@ -322,134 +376,55 @@ function updateSelectionLayer() {
 			'circle-stroke-width': 3,
 		},
 	})
-}
 
-// --- Visit marker layer ---
-
-function buildGeoJSON() {
-	const features = props.visits
-		.filter((v) => v.latitude && v.longitude)
-		.map((v) => ({
-			type: 'Feature' as const,
-			geometry: {
-				type: 'Point' as const,
-				coordinates: [Number(v.longitude), Number(v.latitude)],
-			},
-			properties: {
-				id: v.ID,
-				stop_nr: v.stop_nr,
-				segment_index: v.segment_index,
-			},
-		}))
-
-	const sorted = [...props.visits]
-		.filter((v) => v.latitude && v.longitude)
-		.sort((a, b) => (a.stop_nr ?? 0) - (b.stop_nr ?? 0))
-
-	const routeLine =
-		sorted.length > 1
-			? {
-					type: 'Feature' as const,
-					geometry: {
-						type: 'LineString' as const,
-						coordinates: sorted.map((v) => [Number(v.longitude), Number(v.latitude)]),
-					},
-					properties: {},
-				}
-			: null
-
-	return { features, routeLine }
-}
-
-function addBaseLayers() {
-	if (!map) return
-
-	const { features, routeLine } = buildGeoJSON()
-
-	if (map.getSource(visitsSourceId)) {
-		;(map.getSource(visitsSourceId) as maplibregl.GeoJSONSource).setData({
-			type: 'FeatureCollection',
-			features,
+	if (props.mode === 'group') {
+		ensureSource(SRC.draw, buildDrawFC())
+		ensureLayer(LAYER.drawFill, {
+			type: 'fill',
+			source: SRC.draw,
+			paint: { 'fill-color': '#6366f1', 'fill-opacity': 0.15 },
+			filter: ['==', '$type', 'Polygon'],
 		})
-	} else {
-		map.addSource(visitsSourceId, {
-			type: 'geojson',
-			data: { type: 'FeatureCollection', features },
+		ensureLayer(LAYER.drawLine, {
+			type: 'line',
+			source: SRC.draw,
+			paint: { 'line-color': '#6366f1', 'line-width': 2, 'line-dasharray': [3, 2] },
+			filter: ['==', '$type', 'LineString'],
 		})
-
-		map.addLayer({
-			id: visitsLayerId,
+		ensureLayer(LAYER.drawVerts, {
 			type: 'circle',
-			source: visitsSourceId,
+			source: SRC.draw,
 			paint: {
-				'circle-radius': 8,
-				'circle-color': '#3b82f6',
+				'circle-radius': 5,
+				'circle-color': '#6366f1',
 				'circle-stroke-color': '#ffffff',
 				'circle-stroke-width': 2,
 			},
-		})
-
-		map.on('click', visitsLayerId, (e) => {
-			const id = e.features?.[0]?.properties?.id
-			if (id == null) return
-
-			if (props.mode === 'group' && activeTool.value === 'pointer') {
-				toggleSelection(Number(id))
-			}
-			emit('visit-click', Number(id))
-		})
-
-		map.on('mouseenter', visitsLayerId, () => {
-			if (map) map.getCanvas().style.cursor = 'pointer'
-		})
-		map.on('mouseleave', visitsLayerId, () => {
-			if (map && activeTool.value !== 'select') map.getCanvas().style.cursor = ''
+			filter: ['==', '$type', 'Point'],
 		})
 	}
-
-	if (props.showRoute && routeLine) {
-		if (map.getSource(routeSourceId)) {
-			;(map.getSource(routeSourceId) as maplibregl.GeoJSONSource).setData(routeLine as any)
-		} else {
-			map.addSource(routeSourceId, {
-				type: 'geojson',
-				data: routeLine as any,
-			})
-
-			map.addLayer({
-				id: routeLayerId,
-				type: 'line',
-				source: routeSourceId,
-				paint: {
-					'line-color': '#6366f1',
-					'line-width': 3,
-					'line-opacity': 0.7,
-					'line-dasharray': [2, 2],
-				},
-			})
-		}
-	} else if (map.getLayer(routeLayerId)) {
-		map.removeLayer(routeLayerId)
-		if (map.getSource(routeSourceId)) map.removeSource(routeSourceId)
-	}
-
-	updateSelectionLayer()
 }
 
-function toggleSelection(ID: number) {
-	const idx = selectedVisitIds.value.indexOf(ID)
-	if (idx === -1) {
-		selectedVisitIds.value = [...selectedVisitIds.value, ID]
-	} else {
-		selectedVisitIds.value = selectedVisitIds.value.filter((v) => v !== ID)
-	}
+function updateVisitSource() {
+	const src = map?.getSource(SRC.visits) as maplibregl.GeoJSONSource | undefined
+	src?.setData(buildVisitsFC())
+}
+
+function updateRouteSource() {
+	const src = map?.getSource(SRC.route) as maplibregl.GeoJSONSource | undefined
+	src?.setData(props.showRoute ? (buildRouteFC() ?? emptyFC()) : emptyFC())
+}
+
+function updateSelSource() {
+	const src = map?.getSource(SRC.sel) as maplibregl.GeoJSONSource | undefined
+	src?.setData(buildSelFC())
 }
 
 function fitBounds() {
 	if (!map) return
 	const coords = props.visits
-		.filter((v) => v.latitude && v.longitude)
-		.map((v) => [Number(v.longitude), Number(v.latitude)] as [number, number])
+		.map((v) => toCoord(v))
+		.filter((c): c is [number, number] => c !== null)
 
 	if (coords.length === 0) return
 	if (coords.length === 1) {
@@ -466,27 +441,64 @@ function fitBounds() {
 }
 
 // --- Lifecycle ---
-
 onMounted(() => {
-	if (!mapContainer.value) return
+	const container = mapContainer.value
+	if (!container) return
 
-	map = new maplibregl.Map({
-		container: mapContainer.value,
-		style: styleUrl('streets'),
-		center: props.center,
-		zoom: props.zoom,
-		...(props.maxBounds ? { maxBounds: props.maxBounds } : {}),
+	const currentMap = new maplibregl.Map({
+		container,
+		style: styleUrl('basic-preview'),
+		center: [11.68, 56.25],
+		zoom: 6,
 	})
 
-	map.addControl(new maplibregl.NavigationControl(), 'top-right')
+	window.addEventListener('mouseup', () => {
+		if (map) (map as any).stop()
+	})
+
+	map = currentMap
+
+	map.on('error', ({ error }) => {
+		console.error('MapLibre error:', error)
+	})
 
 	map.on('load', () => {
 		addBaseLayers()
-		if (props.visits.length > 0) fitBounds()
-	})
 
-	map.on('click', handleMapClick)
-	map.on('dblclick', handleMapDblClick)
+		map!.on('click', LAYER.visits, (e) => {
+			const id = e.features?.[0]?.properties?.id
+			if (id == null) return
+
+			if (props.mode === 'group' && activeTool.value === 'pointer') {
+				toggleSelection(Number(id))
+			}
+			emit('visit-click', Number(id))
+		})
+
+		map!.on('mouseenter', LAYER.visits, () => {
+			if (map) map.getCanvas().style.cursor = 'pointer'
+		})
+		map!.on('mouseleave', LAYER.visits, () => {
+			if (map && activeTool.value !== 'select' && !isDrawing.value) {
+				map.getCanvas().style.cursor = ''
+			}
+		})
+
+		map!.on('click', (e) => {
+			if (activeTool.value === 'select') handleMapClick(e)
+		})
+
+		map!.on('dblclick', (e) => {
+			if (activeTool.value === 'select' && isDrawing.value) {
+				e.originalEvent.preventDefault()
+				runSelection()
+			}
+		})
+
+		if (props.visits.length > 0) {
+			fitBounds()
+		}
+	})
 
 	document.addEventListener('keydown', handleKeydown)
 })
@@ -497,19 +509,13 @@ onBeforeUnmount(() => {
 	map = null
 })
 
-function handleKeydown(e: KeyboardEvent) {
-	if (e.key === 'Escape') {
-		cancelDrawing()
-	}
-	if (e.key === 'Enter' && isDrawing.value) {
-		finishDrawing()
-	}
-}
-
 watch(
 	() => props.visits,
 	() => {
-		if (map && map.isStyleLoaded()) addBaseLayers()
+		if (!map?.isStyleLoaded()) return
+		updateVisitSource()
+		updateRouteSource()
+		if (props.showRoute) fitBounds()
 	},
 	{ deep: true },
 )
@@ -517,7 +523,14 @@ watch(
 watch(
 	() => props.showRoute,
 	() => {
-		if (map && map.isStyleLoaded()) addBaseLayers()
+		if (map?.isStyleLoaded()) addBaseLayers()
+	},
+)
+
+watch(
+	() => props.mode,
+	() => {
+		if (map?.isStyleLoaded()) addBaseLayers()
 	},
 )
 </script>
