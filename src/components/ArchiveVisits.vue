@@ -1,4 +1,6 @@
 <template>
+	<VisitMap :visits="visits" :mode="mode" :showRoute="showRoute" :center="center" :zoom="zoom" />
+
 	<div>
 		<h3>Arkiv</h3>
 		<p class="subtitle">Afsluttede besøg</p>
@@ -64,39 +66,31 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { visitsApi } from '@/api/visits'
+import type { VisitWithDebitors } from '@/api/visits'
 import { errorApi } from '@/utils/axios'
 import DataTable from './DataTable.vue'
+import VisitMap from './VisitMap.vue'
 
 interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  filterable?: boolean
-  copyable?: boolean
+	key: string
+	label: string
+	sortable?: boolean
+	filterable?: boolean
+	copyable?: boolean
 }
 
-interface VisitData {
-  ID: number
-  sagsnr: number
-  address: string
-  visit_date: string
-  visit_time?: string
-  stop_nr?: number
-  group_id?: number | null
-  status?: { ID: number; text: string }
-  konsulentName?: string
-  user?: { name: string }
-  debitors: Array<{ ID: number; name: string }>
-  type: { text: string }
-  visit_response?: { actual_time: string } | null
-  [key: string]: unknown
-}
+type ArchiveVisit = VisitWithDebitors & { konsulentName: string }
 
 interface VisitGroup {
-  key: string
-  visits: VisitData[]
-  date: string | null
+	key: string
+	visits: ArchiveVisit[]
+	date: string | null
 }
+
+const mode = ref<'view' | 'group'>('view')
+const showRoute = ref(false)
+const center: [number, number] = [10.5, 55.5]
+const zoom = 7
 
 const columns: Column[] = [
 	{ key: 'ID', label: 'ID', sortable: true, filterable: true },
@@ -114,8 +108,8 @@ const columns: Column[] = [
 	{ key: 'type.text', label: 'Type', sortable: true, filterable: true },
 ]
 
-const visits = ref<VisitData[]>([])
-const selectedVisitIds = ref<(number | string)[]>([])
+const visits = ref<ArchiveVisit[]>([])
+const selectedVisitIds = ref<number[]>([])
 const error = ref<string | null>(null)
 const tableRefs = ref<Record<string, any>>({})
 const expandedGroups = ref<Set<string>>(new Set())
@@ -126,7 +120,7 @@ const setTableRef = (key: string, el: any) => {
 
 const groupedVisits = computed<VisitGroup[]>(() => {
 	const groups: Record<string, VisitGroup> = {}
-	const other: VisitData[] = []
+	const other: ArchiveVisit[] = []
 
 	visits.value.forEach((visit) => {
 		if (visit.group_id && visit.group_id !== 0) {
@@ -143,7 +137,9 @@ const groupedVisits = computed<VisitGroup[]>(() => {
 		group.date = group.visits[0]?.visit_date ?? null
 	})
 
-	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
+	const sortedGroups = Object.values(groups).sort(
+		(a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime(),
+	)
 
 	if (other.length > 0) {
 		other.sort((a, b) => {
@@ -163,9 +159,9 @@ onMounted(fetchVisits)
 async function fetchVisits() {
 	try {
 		const result = await visitsApi.getByStatus(5)
-		visits.value = (result || []).map((visit: any) => ({
+		visits.value = (result || []).map((visit) => ({
 			...visit,
-			konsulentName: visit.konsulentName || visit.user?.name || 'Ukendt konsulent',
+			konsulentName: (visit as any).konsulentName || visit.user?.name || 'Ukendt konsulent',
 		}))
 		error.value = null
 	} catch (err: any) {
@@ -188,7 +184,7 @@ function formatDate(date: string | null | undefined): string {
 }
 
 const handleSelectionChange = (selectedIds: (number | string)[]) => {
-	selectedVisitIds.value = selectedIds
+	selectedVisitIds.value = selectedIds.map(Number)
 }
 
 function toggleGroup(key: string) {

@@ -50,6 +50,7 @@ declare module 'vue' {
     TheWelcome: typeof import('./src/components/TheWelcome.vue')['default']
     UpdateUser: typeof import('./src/components/UpdateUser.vue')['default']
     VisitCard: typeof import('./src/components/VisitCard.vue')['default']
+    VisitMap: typeof import('./src/components/VisitMap.vue')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
     YesNo: typeof import('./src/components/forms/YesNo.vue')['default']
   }
