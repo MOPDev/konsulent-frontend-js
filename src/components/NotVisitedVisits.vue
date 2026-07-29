@@ -40,7 +40,7 @@
 					:page-size="100"
 					v-model="selectedVisitIds"
 					@selection-ids-changed="handleSelectionChange"
-					:row-class="(item: any) => item.cancelled ? 'cancelled-row' : undefined"
+					:row-class="(item: any) => (item.cancelled ? 'cancelled-row' : undefined)"
 					:disable-selection-check="(item: any) => !!item.cancelled"
 				>
 					<template #cell-konsulentName="{ item }">
@@ -94,35 +94,35 @@ import { ref, computed, onMounted } from 'vue'
 import DataTable from './DataTable.vue'
 
 interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  filterable?: boolean
-  copyable?: boolean
+	key: string
+	label: string
+	sortable?: boolean
+	filterable?: boolean
+	copyable?: boolean
 }
 
 interface VisitData {
-  ID: number
-  sagsnr: number
-  address: string
-  visit_date: string
-  visit_time?: string
-  stop_nr?: number
-  group_id?: number | null
-  status?: { ID: number; text: string }
-  status_id?: number
-  konsulentName?: string
-  user?: { name: string }
-  debitors: Array<{ ID: number; name: string }>
-  type: { text: string }
-  cancelled?: boolean | null
-  [key: string]: unknown
+	ID: number
+	sagsnr: number
+	address: string
+	visit_date: string
+	visit_time?: string
+	stop_nr?: number
+	group_id?: number | null
+	status?: { ID: number; text: string }
+	status_id?: number
+	konsulentName?: string
+	user?: { name: string }
+	debitors: Array<{ ID: number; name: string }>
+	type: { text: string }
+	cancelled?: boolean | null
+	[key: string]: unknown
 }
 
 interface VisitGroup {
-  key: string
-  visits: VisitData[]
-  date: string | null
+	key: string
+	visits: VisitData[]
+	date: string | null
 }
 
 const columns: Column[] = [
@@ -248,6 +248,9 @@ async function downloadGroupExcel(groupId: number) {
 }
 
 async function handleCancel(visit: any) {
+	if (!confirm('Er du sikker på, at du vil afmelde dette besøg?')) {
+		return
+	}
 	error.value = null
 	try {
 		await visitsApi.cancelVisit(visit.ID)
@@ -260,6 +263,9 @@ async function handleCancel(visit: any) {
 }
 
 async function handleUncancel(visit: any) {
+	if (!confirm('Er du sikker på, at du vil fortryde afmeldingen af dette besøg?')) {
+		return
+	}
 	error.value = null
 	try {
 		await visitsApi.uncancelVisit(visit.ID)
@@ -280,9 +286,7 @@ async function handleDeleteVisits() {
 
 	error.value = null
 	try {
-		const ops = selectedVisitIds.value.map((id) =>
-			visitsApi.delete(Number(id)),
-		)
+		const ops = selectedVisitIds.value.map((id) => visitsApi.delete(Number(id)))
 		const results = await Promise.allSettled(ops)
 
 		results.forEach((r: PromiseSettledResult<any>, i: number) => {

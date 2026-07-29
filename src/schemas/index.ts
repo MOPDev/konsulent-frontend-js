@@ -165,7 +165,6 @@ export const VisitWithoutUserOrDebitorsSchema = z.object({
 	longitude: z.string(),
 	notes: z.string(),
 	sagsnr: z.number(),
-	stop_nr: z.number(),
 	visit_date: z.string(), //z.coerce.date(),
 	visit_time: z.string(),
 	visit_interval: z.string(),
@@ -181,6 +180,8 @@ export const VisitWithoutUserOrDebitorsSchema = z.object({
 	advopro_deadline_date: z.string(),
 	advopro_klient: z.string(),
 	group_id: z.number().nullable(),
+	segment_index: z.number().nullable(),
+	stop_nr: z.number().nullable(),
 	cancelled: z.boolean().nullable(),
 })
 export type VisitWithoutUserOrDebitors = z.infer<typeof VisitWithoutUserOrDebitorsSchema>
