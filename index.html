@@ -14,12 +14,6 @@
         const favicon = document.getElementById('favicon')
         favicon.href = darkMode ? '/favicon-dark.ico' : '/favicon-light.ico'
       }
-
-      const matchMedia = window.matchMedia('(prefers-color-scheme: dark)')
-      updateFavicon(matchMedia.matches)
-      matchMedia.addEventListener('change', (e) => {
-        updateFavicon(e.matches)
-      })
     </script>
   </body>
 </html>

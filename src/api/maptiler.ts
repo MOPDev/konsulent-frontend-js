@@ -5,6 +5,7 @@ const tilesBase = `${api.defaults.baseURL}/tiles`
 const geocodeBase = `${api.defaults.baseURL}/geocode`
 
 export type MapStyle =
+	| 'basic-preview'
 	| 'streets'
 	| 'outdoor'
 	| 'satellite'
@@ -15,8 +16,8 @@ export type MapStyle =
 	| 'dataviz'
 	| 'ocean'
 
-/** URL to a MapTiler style JSON for MapLibre GL, proxied through the backend. */
-export const styleUrl = (style: MapStyle = 'streets') => `${tilesBase}/maps/${style}/style.json`
+export const styleUrl = (style: MapStyle = 'basic-preview') =>
+	`${tilesBase}/styles/${style}/style.json`
 
 /** Generic tile URL builder through the backend proxy. */
 export const tileUrl = (path: string) => `${tilesBase}/${path.replace(/^\//, '')}`

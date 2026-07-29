@@ -472,7 +472,7 @@ onMounted(() => {
 
 	map = new maplibregl.Map({
 		container: mapContainer.value,
-		style: styleUrl('streets'),
+		style: styleUrl('basic-preview'),
 		center: props.center,
 		zoom: props.zoom,
 		...(props.maxBounds ? { maxBounds: props.maxBounds } : {}),
