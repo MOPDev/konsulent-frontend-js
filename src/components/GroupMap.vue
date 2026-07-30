@@ -506,22 +506,6 @@ function updateSelSource() {
 	src?.setData(buildSelFC())
 }
 
-function fitBounds() {
-	if (!map) return
-	const coords = props.visits.map(toCoord).filter((c): c is [number, number] => c !== null)
-	if (coords.length === 0) return
-	if (coords.length === 1) {
-		map.setCenter(coords[0])
-		map.setZoom(14)
-		return
-	}
-	const bounds = coords.reduce(
-		(b, c) => b.extend(c),
-		new maplibregl.LngLatBounds(coords[0], coords[0]),
-	)
-	map.fitBounds(bounds, { padding: 60 })
-}
-
 // --- Lifecycle ---
 
 onMounted(() => {
