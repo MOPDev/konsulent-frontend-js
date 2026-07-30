@@ -2,17 +2,17 @@
 	<Teleport to="body">
 		<div v-if="show">
 			<div class="modal-backdrop fade show"></div>
-			<div
-				class="modal fade show d-block"
-				tabindex="-1"
-				style="display: block"
-				role="dialog"
-			>
+			<div class="modal fade show d-block" tabindex="-1" style="display: block" role="dialog">
 				<div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
 					<div class="modal-content">
 						<div class="modal-header">
 							<h5 class="modal-title">Geokodning af adresser</h5>
-							<button type="button" class="btn-close" @click="handleClose" aria-label="Luk"></button>
+							<button
+								type="button"
+								class="btn-close"
+								@click="handleClose"
+								aria-label="Luk"
+							></button>
 						</div>
 						<div class="modal-body">
 							<div v-if="items.length === 0" class="text-center py-4 text-muted">
@@ -30,7 +30,9 @@
 									'border-danger': item.status === 'error',
 								}"
 							>
-								<div class="card-header d-flex justify-content-between align-items-center">
+								<div
+									class="card-header d-flex justify-content-between align-items-center"
+								>
 									<strong class="text-truncate me-2">
 										#{{ item.visit.sagsnr }} — {{ item.visit.adresse }},
 										{{ item.visit.postnr }} {{ item.visit.bynavn }}
@@ -49,19 +51,30 @@
 								</div>
 								<div class="card-body">
 									<!-- Geocoding in progress -->
-									<div v-if="item.status === 'geocoding'" class="text-center py-2">
-										<div class="spinner-border spinner-border-sm text-info me-2" role="status"></div>
+									<div v-if="item.status === 'pending'" class="text-center py-2">
+										<div
+											class="spinner-border spinner-border-sm text-info me-2"
+											role="status"
+										></div>
 										Geokoder...
 									</div>
 
 									<!-- Error state -->
-									<div v-if="item.status === 'error'" class="alert alert-danger py-2 mb-2">
+									<div
+										v-if="item.status === 'error'"
+										class="alert alert-danger py-2 mb-2"
+									>
 										{{ item.error }}
 									</div>
 
 									<!-- Results list -->
-									<div v-if="item.results.length > 0 && item.status !== 'done'" class="mb-2">
-										<label class="form-label fw-semibold">Vælg den korrekte adresse:</label>
+									<div
+										v-if="item.results.length > 0 && item.status !== 'done'"
+										class="mb-2"
+									>
+										<label class="form-label fw-semibold"
+											>Vælg den korrekte adresse:</label
+										>
 										<div
 											v-for="(feature, fIdx) in item.results"
 											:key="fIdx"
@@ -75,7 +88,10 @@
 												:id="'result-' + idx + '-' + fIdx"
 												@change="selectResult(idx, feature)"
 											/>
-											<label class="form-check-label" :for="'result-' + idx + '-' + fIdx">
+											<label
+												class="form-check-label"
+												:for="'result-' + idx + '-' + fIdx"
+											>
 												{{ formatFeature(feature) }}
 											</label>
 										</div>
@@ -83,7 +99,11 @@
 
 									<!-- No results -->
 									<div
-										v-if="item.results.length === 0 && item.status === 'done' && !item.selectedResult"
+										v-if="
+											item.results.length === 0 &&
+											item.status === 'done' &&
+											!item.selectedResult
+										"
 										class="alert alert-warning py-2 mb-2"
 									>
 										Ingen resultater fra geokodning.
@@ -91,12 +111,20 @@
 
 									<!-- Manual address input -->
 									<div class="mb-2">
-										<label class="form-label fw-semibold">Eller indtast adresse manuelt:</label>
+										<label class="form-label fw-semibold"
+											>Eller indtast adresse manuelt:</label
+										>
 										<div class="input-group">
 											<input
 												type="text"
 												class="form-control form-control-sm"
-												:placeholder="item.visit.adresse + ', ' + item.visit.postnr + ' ' + item.visit.bynavn"
+												:placeholder="
+													item.visit.adresse +
+													', ' +
+													item.visit.postnr +
+													' ' +
+													item.visit.bynavn
+												"
 												v-model="item.manualAddress"
 												@input="onManualInput(idx)"
 											/>
@@ -128,7 +156,9 @@
 							</div>
 						</div>
 						<div class="modal-footer">
-							<button type="button" class="btn btn-secondary" @click="handleClose">Annuller</button>
+							<button type="button" class="btn btn-secondary" @click="handleClose">
+								Annuller
+							</button>
 							<button
 								type="button"
 								class="btn btn-primary"
@@ -147,7 +177,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { geocode } from '@/api/maptiler'
+import { geocode, geocodeStructured } from '@/api/maptiler'
 import type { PhotonFeature } from '@/api/maptiler'
 
 interface VisitItem {
@@ -245,11 +275,10 @@ function statusLabel(s: string): string {
 	}
 }
 
-function buildQuery(visit: VisitItem): string {
-	const parts = [visit.adresse]
-	if (visit.postnr) parts.push(visit.postnr)
-	if (visit.bynavn) parts.push(visit.bynavn)
-	return parts.join(', ')
+function parseAddress(adresse: string): { street: string; housenumber: string } {
+	const m = adresse.match(/^(.*?)\s+(\d[\d\sA-Za-z]*)$/)
+	if (m) return { street: m[1].trim(), housenumber: m[2].trim() }
+	return { street: adresse, housenumber: '' }
 }
 
 async function startGeocoding() {
@@ -257,9 +286,19 @@ async function startGeocoding() {
 		const item = items.value[idx]
 		item.status = 'geocoding'
 		try {
-			const query = buildQuery(item.visit)
-			const response = await geocode(query)
-			item.results = response.features
+			const { street, housenumber } = parseAddress(item.visit.adresse)
+			const response = await geocodeStructured({
+				street,
+				housenumber: housenumber || undefined,
+				postcode: item.visit.postnr || undefined,
+				city: item.visit.bynavn || undefined,
+			})
+			let features = response.features
+			const houseFeatures = features.filter(
+				(f) => f.properties.type === 'house' || f.properties.housenumber,
+			)
+			if (houseFeatures.length > 0) features = houseFeatures
+			item.results = features
 			if (item.results.length === 1) {
 				item.selectedResult = item.results[0]
 			} else if (item.results.length > 1) {
@@ -284,11 +323,14 @@ function formatFeature(f: PhotonFeature): string {
 		let s = p.street
 		if (p.housenumber) s += ' ' + p.housenumber
 		parts.push(s)
+	} else if (p.housenumber) {
+		parts.push(p.housenumber)
 	}
 	if (p.postcode) parts.push(p.postcode)
 	if (p.city) parts.push(p.city)
-	if (p.state) parts.push(p.state)
-	if (p.country) parts.push(p.country)
+	if (p.district && p.district !== p.city) parts.push(`(${p.district})`)
+	if (p.type && p.type !== 'house')
+		parts.push(`[${p.type}${p.osm_value ? ': ' + p.osm_value : ''}]`)
 	return parts.join(', ') || 'Ukendt adresse'
 }
 
@@ -305,7 +347,12 @@ async function manualGeocode(idx: number) {
 	item.selectedResult = null
 	try {
 		const response = await geocode(item.manualAddress.trim())
-		item.results = response.features
+		let features = response.features
+		const houseFeatures = features.filter(
+			(f) => f.properties.type === 'house' || f.properties.housenumber,
+		)
+		if (houseFeatures.length > 0) features = houseFeatures
+		item.results = features
 		if (item.results.length > 0) {
 			item.selectedResult = item.results[0]
 		}
@@ -351,7 +398,7 @@ function handleConfirm() {
 		}
 
 		if (!geocodingAddress) {
-			geocodingAddress = buildQuery(item.visit)
+			geocodingAddress = `${item.visit.adresse}, ${item.visit.postnr} ${item.visit.bynavn}`
 		}
 
 		return {

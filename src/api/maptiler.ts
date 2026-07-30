@@ -28,6 +28,11 @@ export type PhotonFeature = {
 		city?: string
 		state?: string
 		country?: string
+		district?: string
+		osm_type?: string
+		osm_value?: string
+		type?: string
+		extent?: [number, number, number, number]
 	}
 	type: 'Feature'
 }
@@ -37,8 +42,20 @@ export interface PhotonResponse {
 }
 
 export async function geocode(query: string): Promise<PhotonResponse> {
-	const res = await api.get(`${geocodeBase}/api`, {
-		params: { q: query, lang: 'da', limit: 10 },
+	const res = await api.get(`${geocodeBase}/api/`, {
+		params: { q: query, limit: 10 },
+	})
+	return res.data
+}
+
+export async function geocodeStructured(params: {
+	street?: string
+	housenumber?: string
+	postcode?: string
+	city?: string
+}): Promise<PhotonResponse> {
+	const res = await api.get(`${geocodeBase}/structured`, {
+		params: { ...params, limit: 10 },
 	})
 	return res.data
 }
