@@ -19,6 +19,9 @@
 			</button>
 			<button v-if="isDrawing" class="btn-done" @click="finishDrawing">✓ Færdig</button>
 			<button v-if="isDrawing" class="btn-cancel" @click="cancelDrawing">✗ Fortryd</button>
+			<button v-if="hasPolygon && !isDrawing" class="btn-cancel" @click="cancelDrawing">
+				✗ Fjern polygon
+			</button>
 		</div>
 
 		<div v-if="selectedVisitIds.length" class="selection-bar">
@@ -41,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { styleUrl, geocode } from '@/api/maptiler'
@@ -92,6 +95,8 @@ const isDrawing = ref(false)
 const drawVertices = ref<[number, number][]>([])
 const selectedVisitIds = ref<number[]>([...props.modelValue])
 const selectedGroupId = ref<number | null>(null)
+
+const hasPolygon = computed(() => drawVertices.value.length >= 3)
 
 // --- Geocoding ---
 let geoPopup: maplibregl.Popup | null = null
@@ -219,11 +224,12 @@ watch(
 		if (ids.join(',') !== selectedVisitIds.value.join(',')) {
 			selectedVisitIds.value = [...ids]
 		}
+		if (map?.isStyleLoaded()) updateSelSource()
 	},
 )
 
 function setTool(tool: 'pointer' | 'select') {
-	if (isDrawing.value) cancelDrawing()
+	if (isDrawing.value || hasPolygon.value) cancelDrawing()
 	activeTool.value = tool
 	updateCursor()
 }
@@ -237,6 +243,7 @@ function updateCursor() {
 function clearSelection() {
 	selectedVisitIds.value = []
 	selectedGroupId.value = null
+	cancelDrawing()
 }
 
 function toggleSelection(id: number) {
@@ -308,16 +315,36 @@ function buildSelFC(): GeoJSON.FeatureCollection {
 	return { type: 'FeatureCollection', features }
 }
 
+const SNAP_DEG = 0.002 // ~200m at DK latitude — snap threshold
+
+function findSnapTarget(pt: [number, number]): [number, number] | null {
+	let best: [number, number] | null = null
+	let bestDist = SNAP_DEG
+	for (const v of props.visits) {
+		const c = toCoord(v)
+		if (!c) continue
+		const d = Math.sqrt((pt[0] - c[0]) ** 2 + (pt[1] - c[1]) ** 2)
+		if (d < bestDist) {
+			bestDist = d
+			best = c
+		}
+	}
+	return best
+}
+
 function buildDrawFC(): GeoJSON.FeatureCollection {
 	const verts = drawVertices.value
 	const features: GeoJSON.Feature[] = []
-	if (verts.length >= 2) {
+	if (verts.length >= 3 && !isDrawing.value) {
 		features.push({
 			type: 'Feature',
-			geometry: {
-				type: 'LineString',
-				coordinates: isDrawing.value ? verts : [...verts, verts[0]],
-			},
+			geometry: { type: 'Polygon', coordinates: [[...verts, verts[0]]] },
+			properties: {},
+		})
+	} else if (verts.length >= 2) {
+		features.push({
+			type: 'Feature',
+			geometry: { type: 'LineString', coordinates: verts },
 			properties: {},
 		})
 	}
@@ -355,6 +382,13 @@ function updateDrawSource() {
 	src?.setData(buildDrawFC())
 }
 
+watch(isDrawing, () => {
+	if (!map?.isStyleLoaded()) return
+	if (!map.getLayer(LAYER.drawFill)) return
+	map.setPaintProperty(LAYER.drawFill, 'fill-color', isDrawing.value ? '#6366f1' : '#9ca3af')
+	map.setPaintProperty(LAYER.drawFill, 'fill-opacity', isDrawing.value ? 0.15 : 0.35)
+})
+
 function runSelection() {
 	const verts = drawVertices.value
 	if (verts.length < 3) {
@@ -369,28 +403,34 @@ function runSelection() {
 	const existing = new Set(selectedVisitIds.value)
 	selected.forEach((v) => existing.add(v.ID))
 	selectedVisitIds.value = Array.from(existing)
-	cancelDrawing()
+	isDrawing.value = false
+	updateDrawSource()
+	updateCursor()
 }
 
 function handleMapClick(e: maplibregl.MapMouseEvent & { originalEvent: MouseEvent }) {
 	if (activeTool.value !== 'select') return
+	if (hasPolygon.value && !isDrawing.value) {
+		cancelDrawing()
+	}
+	const raw: [number, number] = [e.lngLat.lng, e.lngLat.lat]
+	const snapped = findSnapTarget(raw) ?? raw
 	if (!isDrawing.value) {
 		isDrawing.value = true
-		drawVertices.value = [[e.lngLat.lng, e.lngLat.lat]]
+		drawVertices.value = [snapped]
 		updateDrawSource()
 		updateCursor()
 		return
 	}
-	const pt: [number, number] = [e.lngLat.lng, e.lngLat.lat]
 	const first = drawVertices.value[0]
 	if (
 		drawVertices.value.length >= 3 &&
-		Math.sqrt((pt[0] - first[0]) ** 2 + (pt[1] - first[1]) ** 2) < 0.001
+		Math.sqrt((snapped[0] - first[0]) ** 2 + (snapped[1] - first[1]) ** 2) < SNAP_DEG
 	) {
 		runSelection()
 		return
 	}
-	drawVertices.value = [...drawVertices.value, pt]
+	drawVertices.value = [...drawVertices.value, snapped]
 	updateDrawSource()
 }
 
@@ -570,6 +610,13 @@ watch(
 	},
 	{ deep: true },
 )
+
+function setSelectedIds(ids: number[]) {
+	selectedVisitIds.value = ids
+	if (map?.isStyleLoaded()) updateSelSource()
+}
+
+defineExpose({ clearSelection, setSelectedIds })
 </script>
 
 <style scoped>

@@ -34,6 +34,7 @@ declare module 'vue' {
     KonsulentCard: typeof import('./src/components/KonsulentCard.vue')['default']
     LeasingForm: typeof import('./src/components/forms/LeasingForm.vue')['default']
     LetterForm: typeof import('./src/components/forms/LetterForm.vue')['default']
+    MapRoute: typeof import('./src/components/MapRoute.vue')['default']
     MoneyRangeSelector: typeof import('./src/components/forms/MoneyRangeSelector.vue')['default']
     NonPlannedVisits: typeof import('./src/components/NonPlannedVisits.vue')['default']
     NotVisitedVisits: typeof import('./src/components/NotVisitedVisits.vue')['default']

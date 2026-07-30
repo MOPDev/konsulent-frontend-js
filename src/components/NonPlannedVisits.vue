@@ -26,13 +26,13 @@
 			<div v-if="error" class="error">{{ error }}</div>
 
 			<DataTable
-				:data="plannedVisits"
+				:data="ungroupedVisits"
 				:columns="columns"
 				selectable
 				filterable
 				paginated
 				:page-size="100"
-				@selection-ids-changed="handleSelectionChange"
+				v-model="selectedVisits"
 			>
 				<template #cell-debitors="{ item }">
 					<div v-for="debtors in item.debitors" :key="debtors.name">
@@ -49,7 +49,8 @@
 		</div>
 		<div class="np-map">
 			<GroupMap
-				:visits="plannedVisits as any"
+				ref="groupMapRef"
+				:visits="ungroupedVisits as any"
 				v-model="selectedVisitsNum"
 				@create-group="handleCreateGroup"
 				@add-to-group="handleAddToGroup"
@@ -62,7 +63,7 @@
 import { visitsApi } from '@/api/visits'
 import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import DataTable from '@/components/DataTable.vue'
@@ -231,6 +232,10 @@ const fetchUsers = async () => {
 	}
 }
 
+const ungroupedVisits = computed(() =>
+	plannedVisits.value.filter((v) => !v.group_id || v.group_id === 0),
+)
+
 const selectedVisitsNum = computed({
 	get: () => selectedVisits.value.map(Number),
 	set: (ids: number[]) => {
@@ -238,18 +243,40 @@ const selectedVisitsNum = computed({
 	},
 })
 
-const handleSelectionChange = (selectedIds: (number | string)[]) => {
-	selectedVisits.value = selectedIds
-}
+const groupMapRef = ref<InstanceType<typeof GroupMap> | null>(null)
+
+watch(selectedVisits, (ids) => {
+	groupMapRef.value?.setSelectedIds(ids.map(Number))
+})
 
 async function handleCreateGroup(visitIds: number[]) {
-	// TODO: assign a new group_id to these visits via API
-	console.log('Create group for:', visitIds)
+	if (!visitIds.length || isPlanning.value) return
+
+	try {
+		isPlanning.value = true
+		error.value = null
+
+		await visitsApi.assignVisitsToGroup(visitIds)
+
+		selectedVisits.value = []
+		await fetchCreatedVisits()
+	} catch (err: any) {
+		error.value = err.response?.data?.message || 'Fejl ved oprettelse af gruppe'
+		errorApi.log('Error creating group: ' + err.message)
+	} finally {
+		isPlanning.value = false
+	}
 }
 
 async function handleAddToGroup(groupId: number, visitIds: number[]) {
-	// TODO: assign existing group_id to these visits via API
-	console.log('Add to group', groupId, ':', visitIds)
+	try {
+		const ops = visitIds.map((id) => visitsApi.moveVisitToGroup(id, groupId))
+		await Promise.allSettled(ops)
+		await fetchCreatedVisits()
+	} catch (err: any) {
+		error.value = err.response?.data?.message || 'Fejl ved tilføjelse til gruppe'
+		errorApi.log('Error adding to group: ' + err.message)
+	}
 }
 
 fetchUsers()

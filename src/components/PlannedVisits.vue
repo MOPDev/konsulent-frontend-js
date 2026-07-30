@@ -18,7 +18,8 @@
 				<div class="group-title">
 					<span>{{ expandedGroups.has(group.key) ? '▼' : '▶' }}</span>
 					<h4 v-if="group.key !== 'other'">
-						{{ group.visits[0].konsulentName }} - {{ group.visits.length }} -
+						{{ group.visits[0].konsulentName || 'Ikke tildelt konsulent' }} -
+						{{ group.visits.length }} -
 						{{ formatDate(group.date) }}
 					</h4>
 					<h4 v-else>Andre besøg</h4>
@@ -551,7 +552,11 @@ async function submitAddToGroup() {
 	if (!selectedVisit.value) return
 
 	try {
-		await visitsApi.moveVisitToGroup(selectedVisit.value.ID, targetGroupId.value)
+		if (targetGroupId.value === null) {
+			await visitsApi.assignVisitsToGroup([selectedVisit.value.ID])
+		} else {
+			await visitsApi.moveVisitToGroup(selectedVisit.value.ID, Number(targetGroupId.value))
+		}
 		closeAddToGroupModal()
 		await getPlannedVisits()
 	} catch (err: any) {

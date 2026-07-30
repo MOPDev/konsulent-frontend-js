@@ -24,7 +24,7 @@ import { usePlannerStore } from '@/stores/plannerStore'
 import { useAuthStore } from '@/stores/auth'
 import CreateVisits from '@/components/CreateVisits.vue'
 import NonPlannedVisits from '@/components/NonPlannedVisits.vue'
-import PlanVisits from '@/components/PlanVisits.vue'
+import MapRoute from '@/components/MapRoute.vue'
 import PlannedVisits from '@/components/PlannedVisits.vue'
 import NotVisitedVisits from '@/components/NotVisitedVisits.vue'
 import ReviewVisits from '@/components/ReviewVisits.vue'
@@ -35,7 +35,7 @@ const AuthStore = useAuthStore()
 const components: Record<string, Component> = {
 	createVisits: CreateVisits,
 	nonPlannedVisits: NonPlannedVisits,
-	planVisits: PlanVisits,
+	planVisits: MapRoute,
 	plannedVisits: PlannedVisits,
 	notVisitedVisits: NotVisitedVisits,
 	reviewVisits: ReviewVisits,

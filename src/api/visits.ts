@@ -69,7 +69,7 @@ export const visitsApi = {
 
 	// --- Cancel/Soft-delete ---
 
-	updateVisit: (id: number, data: Partial<{ cancelled: boolean }>) =>
+	updateVisit: (id: number, data: Record<string, unknown>) =>
 		client.patch(`/visits/planned/${id}`, data),
 
 	cancelVisit: (id: number) => client.patch(`/visits/planned/${id}`, { cancelled: true }),
@@ -77,6 +77,8 @@ export const visitsApi = {
 	uncancelVisit: (id: number) => client.patch(`/visits/planned/${id}`, { cancelled: false }),
 
 	// --- Group operations ---
+
+	assignVisitsToGroup: (visitIds: number[]) => client.post('/visits/assign', { visitIds }),
 
 	changeGroupDate: (groupId: number, newDate: string) =>
 		client.patch(`/visits/group/${groupId}/date`, { newDate }),
@@ -86,6 +88,17 @@ export const visitsApi = {
 
 	moveVisitToGroup: (visitId: number, targetGroupId: number | null) =>
 		client.patch(`/visits/${visitId}/group`, { targetGroupId }),
+
+	// --- Routing ---
+
+	reorderVisit: (groupId: number, visitId: number, direction: 'up' | 'down') =>
+		client.post(`/visits/group/${groupId}/reorder`, { visitId, direction }),
+
+	splitSegment: (groupId: number, visitId: number) =>
+		client.post(`/visits/group/${groupId}/split`, { visitId }),
+
+	joinSegment: (groupId: number, visitId: number) =>
+		client.post(`/visits/group/${groupId}/join`, { visitId }),
 
 	// --- Files ---
 
