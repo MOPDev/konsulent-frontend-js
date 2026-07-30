@@ -38,13 +38,19 @@
 				</tr>
 			</thead>
 			<tbody>
-				<tr v-for="(item, index) in paginatedData" :key="`${item.sagsnr}-${index}`" :class="rowClass?.(item) || ''">
+				<tr
+					v-for="(item, index) in paginatedData"
+					:key="`${item.sagsnr}-${index}`"
+					:class="rowClass?.(item) || ''"
+				>
 					<td v-if="selectable">
 						<input
 							type="checkbox"
 							:checked="isSelected(item)"
 							:disabled="disableSelectionCheck?.(item) || false"
-							@change="toggleSelection(item, ($event.target as HTMLInputElement).checked)"
+							@change="
+								toggleSelection(item, ($event.target as HTMLInputElement).checked)
+							"
 						/>
 					</td>
 					<td
@@ -87,46 +93,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, withDefaults } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  filterable?: boolean
-  copyable?: boolean
+	key: string
+	label: string
+	sortable?: boolean
+	filterable?: boolean
+	copyable?: boolean
 }
 
 interface DataItem {
-  ID?: number
-  sagsnr?: number | string
-  index?: number
-  [key: string]: any
+	ID?: number
+	sagsnr?: number | string
+	index?: number
+	[key: string]: any
 }
 
-const props = withDefaults(defineProps<{
-  data: DataItem[]
-  columns: Column[]
-  selectable?: boolean
-  filterable?: boolean
-  paginated?: boolean
-  pageSize?: number
-  modelValue?: (number | string)[]
-  rowClass?: (item: DataItem) => string | undefined
-  disableSelectionCheck?: (item: DataItem) => boolean | undefined
-}>(), {
-  selectable: false,
-  filterable: false,
-  paginated: false,
-  pageSize: 20,
-})
+const props = withDefaults(
+	defineProps<{
+		data: DataItem[]
+		columns: Column[]
+		selectable?: boolean
+		filterable?: boolean
+		paginated?: boolean
+		pageSize?: number
+		modelValue?: (number | string)[]
+		rowClass?: (item: DataItem) => string | undefined
+		disableSelectionCheck?: (item: DataItem) => boolean | undefined
+	}>(),
+	{
+		selectable: false,
+		filterable: false,
+		paginated: false,
+		pageSize: 20,
+	},
+)
 
 const emit = defineEmits<{
-  (e: 'selection-changed', items: number[]): void
-  (e: 'selection-ids-changed', ids: (number | string)[]): void
-  (e: 'update:selectedItems', items: number[]): void
-  (e: 'update:selectedVisitIds', ids: (number | string)[]): void
-  (e: 'update:modelValue', val: (number | string)[]): void
+	(e: 'selection-changed', items: number[]): void
+	(e: 'selection-ids-changed', ids: (number | string)[]): void
+	(e: 'update:selectedItems', items: number[]): void
+	(e: 'update:selectedVisitIds', ids: (number | string)[]): void
+	(e: 'update:modelValue', val: (number | string)[]): void
 }>()
 
 // ─── Copy state ───────────────────────────────────────────────────────────────
@@ -261,13 +270,13 @@ const selectAll = (event: Event): void => {
 	}
 
 	if (checked) {
-		const idSet = new Set<(number | string)>(selectedVisitIds.value.concat(idsOnView))
+		const idSet = new Set<number | string>(selectedVisitIds.value.concat(idsOnView))
 		selectedVisitIds.value = Array.from(idSet)
 		const viewIdx = rows.map((_, i) => i)
 		const idxSet = new Set<number>(selectedItems.value.concat(viewIdx))
 		selectedItems.value = Array.from(idxSet)
 	} else {
-		const idsToRemove = new Set<(number | string)>(idsOnView)
+		const idsToRemove = new Set<number | string>(idsOnView)
 		selectedVisitIds.value = selectedVisitIds.value.filter((id) => !idsToRemove.has(id))
 		const viewIdx = new Set(rows.map((_, i) => i))
 		selectedItems.value = selectedItems.value.filter((i) => !viewIdx.has(i))

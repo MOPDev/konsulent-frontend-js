@@ -23,8 +23,8 @@
 				<div v-for="(debtor, dIndex) in item.debtors" :key="debtor.navn">
 					<input
 						type="checkbox"
-						:checked="selectedDebtors[getVisitKey(item)]?.includes(dIndex)"
-						@change="toggleDebtorSelection(getVisitKey(item), dIndex)"
+						:checked="selectedDebtors[getVisitKey(item)]?.includes(Number(dIndex))"
+						@change="toggleDebtorSelection(getVisitKey(item), Number(dIndex))"
 					/>
 					"{{ debtor.navn }}"
 				</div>
@@ -67,7 +67,7 @@ interface AvailableVisit {
 	bynavn: string
 	status: string
 	frist_dato: string
-	debtors: { navn: string; debitorId?: number }[]
+	debtors: { navn: string; debitorId: number }[]
 	index?: number
 	klientRef: string
 	klientnr?: number
