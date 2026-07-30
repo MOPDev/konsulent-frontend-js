@@ -55,7 +55,7 @@ export async function geocodeStructured(params: {
 	city?: string
 }): Promise<PhotonResponse> {
 	const res = await api.get(`${geocodeBase}/structured`, {
-		params: { ...params, limit: 10 },
+		params: { ...params, limit: 10, countrycode: 'DK' },
 	})
 	return res.data
 }

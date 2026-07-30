@@ -72,9 +72,25 @@
 										v-if="item.results.length > 0 && item.status !== 'done'"
 										class="mb-2"
 									>
-										<label class="form-label fw-semibold"
-											>Vælg den korrekte adresse:</label
-										>
+										<div class="d-flex align-items-center gap-2 mb-1">
+											<label class="form-label fw-semibold mb-0"
+												>Vælg den korrekte adresse:</label
+											>
+											<span
+												v-if="item.confidence"
+												class="badge"
+												:class="{
+													'bg-success': item.confidence.score === 'HIGH',
+													'bg-warning text-dark':
+														item.confidence.score === 'MEDIUM',
+													'bg-danger':
+														item.confidence.score === 'NO_MATCH',
+												}"
+												:title="item.confidence.details"
+											>
+												{{ confidenceLabel(item.confidence.score) }}
+											</span>
+										</div>
 										<div
 											v-for="(feature, fIdx) in item.results"
 											:key="fIdx"
@@ -179,6 +195,8 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { geocode, geocodeStructured } from '@/api/maptiler'
 import type { PhotonFeature } from '@/api/maptiler'
+import { parseDanishAddress, calculateConfidence } from '@/utils/parseDanishAddress'
+import type { ParsedAddress } from '@/utils/parseDanishAddress'
 
 interface VisitItem {
 	sagsnr: number | string
@@ -218,6 +236,8 @@ interface GeocodeItem {
 	selectedResult: PhotonFeature | null
 	manualAddress: string
 	error: string | null
+	parsed: ParsedAddress | null
+	confidence: { score: 'HIGH' | 'MEDIUM' | 'NO_MATCH'; details: string } | null
 }
 
 const geocodingSet = ref<Set<number>>(new Set())
@@ -246,6 +266,8 @@ watch(
 				selectedResult: null,
 				manualAddress: '',
 				error: null,
+				parsed: parseDanishAddress(v.adresse),
+				confidence: null,
 			}))
 			await nextTick()
 			startGeocoding()
@@ -275,9 +297,22 @@ function statusLabel(s: string): string {
 	}
 }
 
+function confidenceLabel(s: string): string {
+	switch (s) {
+		case 'HIGH':
+			return 'Sikkert match'
+		case 'MEDIUM':
+			return 'dårligt match'
+		case 'NO_MATCH':
+			return 'Ingen match'
+		default:
+			return s
+	}
+}
+
 function parseAddress(adresse: string): { street: string; housenumber: string } {
-	const m = adresse.match(/^(.*?)\s+(\d[\d\sA-Za-z]*)$/)
-	if (m) return { street: m[1].trim(), housenumber: m[2].trim() }
+	const parsed = parseDanishAddress(adresse)
+	if (parsed) return { street: parsed.street, housenumber: parsed.housenumber }
 	return { street: adresse, housenumber: '' }
 }
 
@@ -298,7 +333,14 @@ async function startGeocoding() {
 				(f) => f.properties.type === 'house' || f.properties.housenumber,
 			)
 			if (houseFeatures.length > 0) features = houseFeatures
+
 			item.results = features
+			item.confidence = null
+
+			if (item.parsed && features.length > 0) {
+				item.confidence = calculateConfidence(item.parsed, features[0])
+			}
+
 			if (item.results.length === 1) {
 				item.selectedResult = item.results[0]
 			} else if (item.results.length > 1) {
@@ -346,6 +388,7 @@ async function manualGeocode(idx: number) {
 	item.results = []
 	item.selectedResult = null
 	try {
+		const manualParsed = parseDanishAddress(item.manualAddress.trim())
 		const response = await geocode(item.manualAddress.trim())
 		let features = response.features
 		const houseFeatures = features.filter(
@@ -353,6 +396,10 @@ async function manualGeocode(idx: number) {
 		)
 		if (houseFeatures.length > 0) features = houseFeatures
 		item.results = features
+		item.confidence = null
+		if (manualParsed && features.length > 0) {
+			item.confidence = calculateConfidence(manualParsed, features[0])
+		}
 		if (item.results.length > 0) {
 			item.selectedResult = item.results[0]
 		}
