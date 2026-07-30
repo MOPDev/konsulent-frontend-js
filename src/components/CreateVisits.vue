@@ -40,6 +40,14 @@
 		</DataTable>
 	</div>
 	<div v-else-if="error">{{ error }}</div>
+
+	<GeocodeModal
+		:show="showGeocodeModal"
+		:visits="pendingGeocodeVisits"
+		:visit-type="selectedVisitTypeObject"
+		@confirm="handleGeocodeConfirm"
+		@close="handleGeocodeClose"
+	/>
 </template>
 
 <script setup lang="ts">
@@ -47,6 +55,8 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
 import DataTable from '@/components/DataTable.vue'
+import GeocodeModal from '@/components/GeocodeModal.vue'
+import type { GeocodedVisit } from '@/components/GeocodeModal.vue'
 
 interface AvailableVisit {
 	sagsnr: number | string
@@ -57,8 +67,10 @@ interface AvailableVisit {
 	bynavn: string
 	status: string
 	frist_dato: string
-	debtors: { navn: string }[]
+	debtors: { navn: string; debitorId?: number }[]
 	index?: number
+	klientRef: string
+	klientnr?: number
 }
 
 interface VisitType {
@@ -83,6 +95,13 @@ const selectedDebtors = ref<Record<string, number[]>>({})
 const error = ref<string | null>(null)
 const selectedVisitType = ref<number | null>(null)
 const visitTypes = ref<VisitType[]>([])
+const showGeocodeModal = ref(false)
+const pendingGeocodeVisits = ref<AvailableVisit[]>([])
+
+const selectedVisitTypeObject = computed(() => {
+	if (!selectedVisitType.value) return null
+	return visitTypes.value.find((type) => type.ID === selectedVisitType.value) ?? null
+})
 
 onMounted(fetchVisitTypes)
 
@@ -152,32 +171,32 @@ const handleSelectionIdsChange = (selectedIds: (number | string)[]) => {
 }
 
 const createVisits = async () => {
+	pendingGeocodeVisits.value = selectedVisitIds.value
+		.map((id) => {
+			const visit = availableVisits.value.find(
+				(v) => String(v.sagsnr) + String(v.index) === id,
+			)
+			if (!visit) return null
+			const visitKey = getVisitKey(visit)
+			return {
+				...visit,
+				debtors: selectedDebtors.value[visitKey]
+					? selectedDebtors.value[visitKey].map((idx) => visit.debtors[idx])
+					: [],
+			}
+		})
+		.filter((v) => v !== null)
+
+	if (pendingGeocodeVisits.value.length === 0) return
+	showGeocodeModal.value = true
+}
+
+async function sendToBackend(geocodedVisits: GeocodedVisit[]) {
 	try {
-		const Data = selectedVisitIds.value
-			.map((id) => {
-				const visit = availableVisits.value.find(
-					(v) => String(v.sagsnr) + String(v.index) === id,
-				)
-				if (!visit) return null
-				const visitKey = getVisitKey(visit)
-				return {
-					...visit,
-					debtors: selectedDebtors.value[visitKey]
-						? selectedDebtors.value[visitKey].map((idx) => visit.debtors[idx])
-						: [],
-				}
-			})
-			.filter((v) => v !== null)
-
-		const visitType = visitTypes.value.find((type) => type.ID === selectedVisitType.value)
-
-		const DataWithType = Data.map((line) => ({ ...line, visit_type: visitType }))
-
-		const response = await api.post('/visits/create', DataWithType, {
+		const response = await api.post('/visits/create', geocodedVisits, {
 			responseType: 'blob',
 		})
 
-		// Create blob and download
 		const blob = new Blob([response.data], {
 			type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 		})
@@ -187,7 +206,7 @@ const createVisits = async () => {
 		link.download =
 			'visits' +
 			new Date().toISOString().slice(0, 10).replace(/-/g, '') +
-			(visitType?.text ?? '') +
+			(selectedVisitTypeObject.value?.text ?? '') +
 			'.xlsx'
 		document.body.appendChild(link)
 		link.click()
@@ -197,11 +216,21 @@ const createVisits = async () => {
 		if (dataTableRef.value) {
 			dataTableRef.value.clearSelection()
 		}
+		showGeocodeModal.value = false
 	} catch (err: any) {
 		errorApi.log('Error creating visits: ' + err.message)
 		console.error('Failed to create visits:', err)
 		errorApi.logError(err)
 	}
+}
+
+function handleGeocodeConfirm(data: GeocodedVisit[]) {
+	showGeocodeModal.value = false
+	sendToBackend(data)
+}
+
+function handleGeocodeClose() {
+	showGeocodeModal.value = false
 }
 
 function toggleDebtorSelection(visitKey: string, dIndex: number) {

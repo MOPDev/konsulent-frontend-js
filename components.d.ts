@@ -24,6 +24,8 @@ declare module 'vue' {
     FileUpload: typeof import('./src/components/forms/FileUpload.vue')['default']
     FormActions: typeof import('./src/components/forms/FormActions.vue')['default']
     FormHeader: typeof import('./src/components/forms/FormHeader.vue')['default']
+    GeocodeModal: typeof import('./src/components/GeocodeModal.vue')['default']
+    GroupMap: typeof import('./src/components/GroupMap.vue')['default']
     IconCommunity: typeof import('./src/components/icons/IconCommunity.vue')['default']
     IconDocumentation: typeof import('./src/components/icons/IconDocumentation.vue')['default']
     IconEcosystem: typeof import('./src/components/icons/IconEcosystem.vue')['default']

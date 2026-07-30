@@ -74,11 +74,16 @@ button {
 <style scoped>
 main {
 	display: flex;
-	flex-direction: column; /* add this - RouterView children stack vertically */
+	flex-direction: column;
 	width: 100%;
-	max-width: 1200px;
-	margin: 0 auto; /* center instead of justify-self */
+	margin: 0 auto;
 	padding: 0 1rem;
+}
+
+:global(.page-constrained) {
+	max-width: 1200px;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .custom-navbar {

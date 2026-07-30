@@ -1,54 +1,60 @@
 <template>
-	<div>
-		<h3>Disse besøg er ikke planlagt</h3>
-		<p>De mangler at få en dato for besøg og hvem der skal til at besøge dem</p>
+	<div class="np-layout">
+		<div class="np-content">
+			<h3>Disse besøg er ikke planlagt</h3>
+			<p>De mangler at få en dato for besøg og hvem der skal til at besøge dem</p>
 
-		<!-- Selection Form -->
-		<form
-			@submit.prevent="handlePlanVisits"
-			class="planning-form"
-			style="margin-bottom: 10px; margin-top: 10px"
-		>
-			<div class="form-row">
-				<button type="submit" :disabled="!selectedVisits.length || isPlanning">
-					Planlæg Valgte Besøg
-				</button>
-			</div>
-		</form>
-		<!-- Selection Form -->
-		<button
-			@click="handleDeleteVisits"
-			:disabled="!selectedVisits.length || isPlanning"
-			style="margin-bottom: 10px"
-		>
-			Slet Valgte Besøg
-		</button>
-
-		<!-- Error Display -->
-		<div v-if="error" class="error">{{ error }}</div>
-
-		<DataTable
-			:data="plannedVisits"
-			:columns="columns"
-			selectable
-			filterable
-			paginated
-			:page-size="100"
-			@selection-ids-changed="handleSelectionChange"
-		>
-			<template #cell-debitors="{ item }">
-				<div v-for="debtors in item.debitors" :key="debtors.name">
-					"{{ debtors?.name }}"
+			<form
+				@submit.prevent="handlePlanVisits"
+				class="planning-form"
+				style="margin-bottom: 10px; margin-top: 10px"
+			>
+				<div class="form-row">
+					<button type="submit" :disabled="!selectedVisits.length || isPlanning">
+						Planlæg Valgte Besøg
+					</button>
 				</div>
-			</template>
-			<template #cell-adresse="{ item }">
-				{{ item.adresse }}, {{ item.postnr }} {{ item.bynavn }}
-			</template>
-			<!-- klientnavn -->
-			<template #cell-klientnavn="{ item }">
-				{{ item.advopro_klient }}
-			</template>
-		</DataTable>
+			</form>
+			<button
+				@click="handleDeleteVisits"
+				:disabled="!selectedVisits.length || isPlanning"
+				style="margin-bottom: 10px"
+			>
+				Slet Valgte Besøg
+			</button>
+
+			<div v-if="error" class="error">{{ error }}</div>
+
+			<DataTable
+				:data="plannedVisits"
+				:columns="columns"
+				selectable
+				filterable
+				paginated
+				:page-size="100"
+				@selection-ids-changed="handleSelectionChange"
+			>
+				<template #cell-debitors="{ item }">
+					<div v-for="debtors in item.debitors" :key="debtors.name">
+						"{{ debtors?.name }}"
+					</div>
+				</template>
+				<template #cell-adresse="{ item }">
+					{{ item.adresse }}, {{ item.postnr }} {{ item.bynavn }}
+				</template>
+				<template #cell-klientnavn="{ item }">
+					{{ item.advopro_klient }}
+				</template>
+			</DataTable>
+		</div>
+		<div class="np-map">
+			<GroupMap
+				:visits="plannedVisits as any"
+				v-model="selectedVisitsNum"
+				@create-group="handleCreateGroup"
+				@add-to-group="handleAddToGroup"
+			/>
+		</div>
 	</div>
 </template>
 
@@ -56,28 +62,33 @@
 import { visitsApi } from '@/api/visits'
 import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import DataTable from '@/components/DataTable.vue'
+import GroupMap from '@/components/GroupMap.vue'
 import type { UserWithoutVisits } from '@/schemas'
 
 interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  filterable?: boolean
-  copyable?: boolean
+	key: string
+	label: string
+	sortable?: boolean
+	filterable?: boolean
+	copyable?: boolean
 }
 
 interface VisitData {
-  ID: number
-  sagsnr: number
-  address: string
-  advopro_klient?: string
-  type: { text: string }
-  debitors: Array<{ name: string }>
-  [key: string]: unknown
+	ID: number
+	sagsnr: number
+	address: string
+	latitude?: string | number
+	longitude?: string | number
+	group_id?: number | null
+	stop_nr?: number | null
+	advopro_klient?: string
+	type: { text: string }
+	debitors: Array<{ name: string }>
+	[key: string]: unknown
 }
 
 const router = useRouter()
@@ -220,8 +231,25 @@ const fetchUsers = async () => {
 	}
 }
 
+const selectedVisitsNum = computed({
+	get: () => selectedVisits.value.map(Number),
+	set: (ids: number[]) => {
+		selectedVisits.value = ids
+	},
+})
+
 const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisits.value = selectedIds
+}
+
+async function handleCreateGroup(visitIds: number[]) {
+	// TODO: assign a new group_id to these visits via API
+	console.log('Create group for:', visitIds)
+}
+
+async function handleAddToGroup(groupId: number, visitIds: number[]) {
+	// TODO: assign existing group_id to these visits via API
+	console.log('Add to group', groupId, ':', visitIds)
 }
 
 fetchUsers()
@@ -270,5 +298,29 @@ fetchCreatedVisits()
 	text-align: center;
 	padding: 20px;
 	color: #666;
+}
+
+.np-layout {
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+}
+.np-content {
+	flex: 1;
+	min-width: 0;
+}
+.np-map {
+	width: 800px;
+	height: 600px;
+	flex-shrink: 0;
+}
+@media (max-width: 900px) {
+	.np-layout {
+		flex-direction: column;
+	}
+	.np-map {
+		width: 100%;
+		height: 500px;
+	}
 }
 </style>

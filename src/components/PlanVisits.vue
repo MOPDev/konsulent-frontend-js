@@ -240,7 +240,6 @@ async function uploadPlannedRoute() {
 <style scoped>
 .add-routes {
 	width: 100%;
-	max-width: 1200px;
 	margin: 0 auto;
 }
 form > div {

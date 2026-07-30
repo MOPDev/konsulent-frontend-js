@@ -1,5 +1,13 @@
 <template>
-	<VisitMap :visits="visits" :mode="mode" :showRoute="showRoute" :center="center" :zoom="zoom" />
+	<div style="margin: 2rem">
+		<VisitMap
+			:visits="visits"
+			:mode="mode"
+			:showRoute="showRoute"
+			:center="center"
+			:zoom="zoom"
+		/>
+	</div>
 
 	<div>
 		<h3>Arkiv</h3>
@@ -89,8 +97,8 @@ interface VisitGroup {
 
 const mode = ref<'view' | 'group'>('view')
 const showRoute = ref(false)
-const center: [number, number] = [10.5, 55.5]
-const zoom = 7
+const center: [number, number] = [11.5, 56.3]
+const zoom = 6
 
 const columns: Column[] = [
 	{ key: 'ID', label: 'ID', sortable: true, filterable: true },
