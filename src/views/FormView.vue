@@ -402,27 +402,40 @@ async function submitForm(visitId: number) {
 		const { data } = await api.post('/visit-response/create', payload)
 
 		if (formData.images.length && data.ID) {
-			for (let i = 0; i < formData.images.length; i++) {
-				const { file } = formData.images[i]
-				const fd = new FormData()
-				fd.append('visit_response_id', String(data.ID))
-				fd.append('image', file)
-				fd.append('sequence', String(i + 1))
-				const url = `/visit-response/${data.ID}/images`
-				await api.post(url, fd, { headers: { 'Content-Type': undefined } })
-			}
+			await Promise.all(
+				formData.images.map((img, i) => {
+					const fd = new FormData()
+					fd.append('visit_response_id', String(data.ID))
+					fd.append('image', img.file)
+					fd.append('sequence', String(i + 1))
+					return api.post(`/visit-response/${data.ID}/images`, fd, {
+						headers: { 'Content-Type': undefined },
+					})
+				}),
+			)
 		}
 
 		if (data.other_assets?.length) {
-			for (const asset of data.other_assets) {
-				const match = formData.other_assets.find((a: OtherAsset) => a.regnr === asset.regnr)
-				if (!match?.image?.file) continue
-				const fd = new FormData()
-				fd.append('image', match.image.file)
-				await api.post(`/asset/${asset.ID}/image`, fd, {
-					headers: { 'Content-Type': undefined },
-				})
-			}
+			await Promise.all(
+				data.other_assets
+					.map((asset: any) => ({
+						asset,
+						match: formData.other_assets.find(
+							(a: OtherAsset) => a.regnr === asset.regnr,
+						),
+					}))
+					.filter(
+						(pair: { asset: any; match: OtherAsset | undefined }) =>
+							pair.match?.image?.file,
+					)
+					.map((pair: { asset: any; match: OtherAsset | undefined }) => {
+						const fd = new FormData()
+						fd.append('image', pair.match!.image!.file)
+						return api.post(`/asset/${pair.asset.ID}/image`, fd, {
+							headers: { 'Content-Type': undefined },
+						})
+					}),
+			)
 		}
 		await api.post(`/visit-response/${data.ID}/complete`)
 		sendBack()
