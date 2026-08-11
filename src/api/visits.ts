@@ -1,5 +1,11 @@
 import { client } from './client'
-import { VisitWithoutUserOrDebitorsSchema, DebitorWithoutVisitsSchema } from '@/schemas'
+import {
+	VisitWithoutUserOrDebitorsSchema,
+	DebitorWithoutVisitsSchema,
+	RouteSettingsSchema,
+	GroupRouteSchema,
+	type RouteSettings,
+} from '@/schemas'
 import { z } from 'zod'
 
 // --- Response wrappers ---
@@ -37,6 +43,7 @@ const OptimizeResponseSchema = z.object({
 	time: z.number(),
 	geometry: z.string().array(),
 	optimal: z.boolean(),
+	overrun: z.boolean(),
 })
 
 export const visitsApi = {
@@ -115,10 +122,23 @@ export const visitsApi = {
 	joinSegment: (groupId: number, visitId: number) =>
 		client.post(`/visits/group/${groupId}/join`, { visitId }),
 
-	optimizeGroup: (
-		groupId: number,
-		opts?: { costing?: string; mode?: string },
-	) => client.post(`/visits/group/${groupId}/optimize`, opts ?? {}, OptimizeResponseSchema),
+	optimizeGroup: (groupId: number, opts?: { costing?: string; mode?: string }) =>
+		client.post(`/visits/group/${groupId}/optimize`, opts ?? {}, OptimizeResponseSchema),
+
+	// --- Route planning settings ---
+
+	getRouteSettings: () => client.get('/route-settings', RouteSettingsSchema),
+
+	saveRouteSettings: (data: Partial<RouteSettings>) =>
+		client.patch('/route-settings', data, RouteSettingsSchema),
+
+	// --- Stored route ---
+
+	getGroupRoute: (groupId: number) =>
+		client.get(`/visits/group/${groupId}/route`, GroupRouteSchema),
+
+	recomputeGroupRoute: (groupId: number) =>
+		client.post(`/visits/group/${groupId}/route`, {}, GroupRouteSchema),
 
 	// --- Files ---
 

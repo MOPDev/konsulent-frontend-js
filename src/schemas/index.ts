@@ -207,3 +207,17 @@ export const UserWithVisitsSchema = z.object({
 	visits: VisitWithoutUserOrDebitorsSchema.array().optional(),
 })
 export type UserWithVisits = z.infer<typeof UserWithVisitsSchema>
+
+export const RouteSettingsSchema = z.object({
+	start_time: z.string(),
+	service_minutes: z.number(),
+	end_time: z.string(),
+	anchor: z.enum(['start', 'end']),
+})
+export type RouteSettings = z.infer<typeof RouteSettingsSchema>
+
+export const GroupRouteSchema = z.object({
+	geometry: z.string().array(),
+	overrun: z.boolean(),
+})
+export type GroupRoute = z.infer<typeof GroupRouteSchema>
