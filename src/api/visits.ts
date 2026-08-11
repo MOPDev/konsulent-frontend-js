@@ -24,6 +24,21 @@ const KonsulentGroupSchema = z.object({
 	visits: VisitWithDebitorsSchema.array(),
 })
 
+const OptimizeWaypointSchema = z.object({
+	id: z.string(),
+	label: z.string(),
+	lat: z.number(),
+	lon: z.number(),
+})
+
+const OptimizeResponseSchema = z.object({
+	waypoints: OptimizeWaypointSchema.array(),
+	distance: z.number(),
+	time: z.number(),
+	geometry: z.string().array(),
+	optimal: z.boolean(),
+})
+
 export const visitsApi = {
 	// --- CRUD ---
 
@@ -99,6 +114,11 @@ export const visitsApi = {
 
 	joinSegment: (groupId: number, visitId: number) =>
 		client.post(`/visits/group/${groupId}/join`, { visitId }),
+
+	optimizeGroup: (
+		groupId: number,
+		opts?: { costing?: string; mode?: string },
+	) => client.post(`/visits/group/${groupId}/optimize`, opts ?? {}, OptimizeResponseSchema),
 
 	// --- Files ---
 

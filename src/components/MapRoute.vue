@@ -2,6 +2,7 @@
 	<div class="mr-layout">
 		<div class="mr-list">
 			<h3>Grupper</h3>
+			<div v-if="error" class="mr-error">{{ error }}</div>
 			<div v-for="group in groups" :key="group.key" class="mr-group">
 				<div
 					class="mr-group-header"
@@ -13,6 +14,15 @@
 						{{ group.visits.length }} besøg
 					</span>
 					<span class="mr-group-date">{{ formatDate(group.date) }}</span>
+					<button
+						v-if="selectedGroup?.key === group.key"
+						class="mr-optimize"
+						:disabled="optimizing"
+						title="Optimér ruten"
+						@click.stop="optimizeGroup"
+					>
+						{{ optimizing ? '…' : 'Optimér' }}
+					</button>
 				</div>
 				<div v-if="selectedGroup?.key === group.key" class="mr-visits">
 					<div
@@ -86,6 +96,7 @@ import { styleUrl } from '@/api/maptiler'
 import { visitsApi } from '@/api/visits'
 import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
+import { decodePolyline } from '@/utils/polyline'
 
 interface VisitData {
 	ID: number
@@ -118,9 +129,17 @@ let updating = false
 const groups = ref<VisitGroup[]>([])
 const selectedGroup = ref<VisitGroup | null>(null)
 const error = ref<string | null>(null)
+const optimizing = ref(false)
+const optimizedLegs = ref<[number, number][][]>([])
 
-const SRC = { route: 'route-src', points: 'points-src' }
-const LAYER = { route: 'route-layer', points: 'points-layer', segRoute: 'seg-route-layer' }
+const SRC = { route: 'route-src', points: 'points-src', optimized: 'optimized-src' }
+const LAYER = {
+	route: 'route-layer',
+	points: 'points-layer',
+	pointsLabel: 'points-label-layer',
+	segRoute: 'seg-route-layer',
+	optimized: 'optimized-layer',
+}
 
 const SEGMENT_COLORS = [
 	'#6366f1',
@@ -164,6 +183,7 @@ function segColor(visit: VisitData): string {
 
 function selectGroup(group: VisitGroup) {
 	selectedGroup.value = group
+	optimizedLegs.value = []
 	updateMap()
 }
 
@@ -237,8 +257,31 @@ async function joinSegment(visit: VisitData, idx: number) {
 	}
 }
 
+async function optimizeGroup() {
+	if (updating || optimizing.value || !selectedGroup.value) return
+	optimizing.value = true
+	error.value = null
+	try {
+		const res = await visitsApi.optimizeGroup(Number(selectedGroup.value.key), {
+			costing: 'auto',
+			mode: 'time',
+		})
+		await refresh()
+		optimizedLegs.value = res.geometry.map((g) => decodePolyline(g))
+		updateMap()
+	} catch (err: any) {
+		optimizedLegs.value = []
+		error.value = 'Optimering fejlede'
+		errorApi.logError(err)
+		updateMap()
+	} finally {
+		optimizing.value = false
+	}
+}
+
 async function refresh() {
 	if (!selectedGroup.value) return
+	optimizedLegs.value = []
 	const all = await visitsApi.getPlanned()
 	const flat: VisitData[] = (all || []).flatMap((k: any) =>
 		(k.visits || []).map((v: any) => ({
@@ -308,14 +351,33 @@ function emptyFC(): GeoJSON.FeatureCollection {
 	return { type: 'FeatureCollection', features: [] }
 }
 
+function buildOptimizedFC(): GeoJSON.FeatureCollection {
+	const features: GeoJSON.Feature[] = optimizedLegs.value
+		.filter((leg) => leg.length >= 2)
+		.map((leg) => ({
+			type: 'Feature',
+			geometry: {
+				type: 'LineString',
+				coordinates: leg.map(([lat, lon]): [number, number] => [lon, lat]),
+			},
+			properties: {},
+		}))
+	return { type: 'FeatureCollection', features }
+}
+
 function updateMap() {
-	if (!map?.isStyleLoaded() || !selectedGroup.value) return
+	// isStyleLoaded() is false during camera transitions (fitBounds), so guard
+	// on the layers we created instead
+	if (!map || !selectedGroup.value || !map.getLayer(LAYER.route)) return
 	const fc = buildRouteFC()
 	const src = map.getSource(SRC.route) as maplibregl.GeoJSONSource | undefined
-	src?.setData(fc)
+	src?.setData(optimizedLegs.value.length ? emptyFC() : fc)
 
 	const ptsSrc = map.getSource(SRC.points) as maplibregl.GeoJSONSource | undefined
 	ptsSrc?.setData(fc)
+
+	const optSrc = map.getSource(SRC.optimized) as maplibregl.GeoJSONSource | undefined
+	optSrc?.setData(buildOptimizedFC())
 
 	// Fit bounds
 	const coords = orderedVisits.value.map((v) => toCoord(v)).filter(Boolean) as [number, number][]
@@ -347,6 +409,18 @@ function addBaseLayers() {
 		filter: ['==', '$type', 'LineString'],
 	})
 
+	ensureSource(SRC.optimized, emptyFC())
+	ensureLayer(LAYER.optimized, {
+		type: 'line',
+		source: SRC.optimized,
+		paint: {
+			'line-color': '#2563eb',
+			'line-width': 4,
+			'line-opacity': 0.9,
+		},
+		filter: ['==', '$type', 'LineString'],
+	})
+
 	ensureSource(SRC.points, emptyFC())
 	ensureLayer(LAYER.points, {
 		type: 'circle',
@@ -356,6 +430,22 @@ function addBaseLayers() {
 			'circle-color': ['match', ['get', 'segment'], ...colors, '#6366f1'],
 			'circle-stroke-color': '#ffffff',
 			'circle-stroke-width': 2,
+		},
+		filter: ['==', '$type', 'Point'],
+	})
+	ensureLayer(LAYER.pointsLabel, {
+		type: 'symbol',
+		source: SRC.points,
+		layout: {
+			'text-field': ['get', 'label'],
+			'text-size': 11,
+			'text-anchor': 'center',
+			'text-allow-overlap': true,
+		},
+		paint: {
+			'text-color': '#ffffff',
+			'text-halo-color': '#1f2937',
+			'text-halo-width': 1.5,
 		},
 		filter: ['==', '$type', 'Point'],
 	})
@@ -458,6 +548,25 @@ onBeforeUnmount(() => {
 .mr-group-header.active {
 	background: #eef2ff;
 	border-color: #6366f1;
+}
+.mr-optimize {
+	flex-shrink: 0;
+	margin-left: 8px;
+	padding: 2px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #1d4ed8;
+	background: #dbeafe;
+	border: 1px solid #93c5fd;
+	border-radius: 4px;
+	cursor: pointer;
+}
+.mr-optimize:hover:not(:disabled) {
+	background: #bfdbfe;
+}
+.mr-optimize:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 .mr-group-title {
 	font-weight: 600;
@@ -565,6 +674,15 @@ onBeforeUnmount(() => {
 	text-align: center;
 	padding: 40px;
 	font-size: 14px;
+}
+.mr-error {
+	margin-bottom: 8px;
+	padding: 6px 10px;
+	font-size: 13px;
+	color: #b91c1c;
+	background: #fee2e2;
+	border: 1px solid #fecaca;
+	border-radius: 4px;
 }
 h3 {
 	margin: 0 0 12px 0;
