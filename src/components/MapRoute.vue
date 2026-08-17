@@ -38,38 +38,40 @@
 						Auto-opdater tider
 					</label>
 				</div>
-				<div v-if="overrun" class="mr-error">Ruten overskrider sluttidspunkt</div>
+				<div class="mr-hint">Klik på en gruppe for at vise ruten. Klik på flere for at sammenligne.</div>
 				<div v-if="error" class="mr-error">{{ error }}</div>
 				<div v-for="group in groups" :key="group.key" class="mr-group">
 					<div
 						class="mr-group-header"
-						:class="{ active: selectedGroup?.key === group.key }"
-						@click="selectGroup(group)"
+						:class="{ active: isSelected(group.key) }"
+						@click="toggleSelectGroup(group)"
 					>
 						<span class="mr-group-title">
+							<span class="mr-group-dot" :style="{ background: groupColor(group.key) }"></span>
 							{{ group.visits[0]?.konsulentName || 'Ikke tildelt konsulent' }} —
 							{{ group.visits.length }} besøg
 						</span>
 						<span class="mr-group-date">{{ formatDate(group.date) }}</span>
+						<span v-if="overrunMap[group.key]" class="mr-overrun">Over tid</span>
 						<button
-							v-if="selectedGroup?.key === group.key"
+							v-if="isSelected(group.key)"
 							class="mr-optimize"
 							:disabled="optimizing"
 							title="Optimér ruten"
-							@click.stop="optimizeGroup"
+							@click.stop="optimizeGroup(group)"
 						>
 							{{ optimizing ? '…' : 'Optimér' }}
 						</button>
 					</div>
-					<div v-if="selectedGroup?.key === group.key" class="mr-visits">
+					<div v-if="isSelected(group.key)" class="mr-visits">
 						<div
-							v-for="(visit, idx) in orderedVisits"
+							v-for="(visit, idx) in orderedVisits(group)"
 							:key="visit.ID"
 							class="mr-visit"
 							:class="{
-								'seg-start': isSegmentStart(visit, idx),
-								'seg-end': isSegmentEnd(visit, idx),
-								locked: isLocked(visit),
+								'seg-start': isSegmentStart(group, visit, idx),
+								'seg-end': isSegmentEnd(group, visit, idx),
+								locked: isLocked(group, visit),
 							}"
 						>
 							<div class="mr-visit-info">
@@ -77,40 +79,40 @@
 								<span class="mr-time">{{ visit.visit_time || '–' }}</span>
 								<span class="mr-sagsnr">{{ visit.sagsnr }}</span>
 								<span class="mr-addr">{{ shortAddress(visit.address) }}</span>
-								<span v-if="isSegmentStart(visit, idx)" class="badge badge-start"
+								<span v-if="isSegmentStart(group, visit, idx)" class="badge badge-start"
 									>START</span
 								>
-								<span v-if="isSegmentEnd(visit, idx)" class="badge badge-end"
+								<span v-if="isSegmentEnd(group, visit, idx)" class="badge badge-end"
 									>SLUT</span
 								>
-								<span v-if="isLocked(visit)" class="badge badge-locked">LÅST</span>
+								<span v-if="isLocked(group, visit)" class="badge badge-locked">LÅST</span>
 							</div>
 							<div class="mr-visit-actions">
 								<button
 									:disabled="idx === 0"
 									title="Flyt op"
-									@click="moveUp(visit, idx)"
+									@click="moveUp(group, visit, idx)"
 								>
 									↑
 								</button>
 								<button
-									:disabled="idx === orderedVisits.length - 1"
+									:disabled="idx === orderedVisits(group).length - 1"
 									title="Flyt ned"
-									@click="moveDown(visit, idx)"
+									@click="moveDown(group, visit, idx)"
 								>
 									↓
 								</button>
 								<button
-									v-if="!isSegmentStart(visit, idx)"
+									v-if="!isSegmentStart(group, visit, idx)"
 									title="Start nyt segment her"
-									@click="splitSegment(visit, idx)"
+									@click="splitSegment(group, visit, idx)"
 								>
 									‖
 								</button>
 								<button
-									v-if="isSegmentStart(visit, idx) && idx > 0"
+									v-if="isSegmentStart(group, visit, idx) && idx > 0"
 									title="Flet med forrige segment"
-									@click="joinSegment(visit, idx)"
+									@click="joinSegment(group, visit, idx)"
 								>
 									⏶
 								</button>
@@ -128,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { styleUrl } from '@/api/maptiler'
@@ -167,10 +169,11 @@ let map: maplibregl.Map | null = null
 let updating = false
 
 const groups = ref<VisitGroup[]>([])
-const selectedGroup = ref<VisitGroup | null>(null)
+const selectedGroups = ref<VisitGroup[]>([])
 const error = ref<string | null>(null)
 const optimizing = ref(false)
-const optimizedLegs = ref<[number, number][][]>([])
+const optimizedLegs = ref<Record<string, [number, number][][]>>({})
+const overrunMap = ref<Record<string, boolean>>({})
 const settings = ref<RouteSettings>({
 	start_time: '13:00',
 	service_minutes: 15,
@@ -180,18 +183,8 @@ const settings = ref<RouteSettings>({
 const savingSettings = ref(false)
 const settingsSaved = ref(false)
 const autoRecompute = ref(false)
-const overrun = ref(false)
 
-const SRC = { route: 'route-src', points: 'points-src', optimized: 'optimized-src' }
-const LAYER = {
-	route: 'route-layer',
-	points: 'points-layer',
-	pointsLabel: 'points-label-layer',
-	segRoute: 'seg-route-layer',
-	optimized: 'optimized-layer',
-}
-
-const SEGMENT_COLORS = [
+const GROUP_COLORS = [
 	'#6366f1',
 	'#10b981',
 	'#f59e0b',
@@ -202,40 +195,61 @@ const SEGMENT_COLORS = [
 	'#84cc16',
 ]
 
-const orderedVisits = computed(() => {
-	if (!selectedGroup.value) return []
-	return [...selectedGroup.value.visits].sort((a, b) => a.stop_nr - b.stop_nr)
-})
+function groupColor(key: string): string {
+	let h = 0
+	for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0
+	return GROUP_COLORS[h % GROUP_COLORS.length]
+}
 
-function isSegmentStart(visit: VisitData, idx: number): boolean {
+const srcRoute = (key: string) => `route-${key}`
+const srcPoints = (key: string) => `points-${key}`
+const srcOptimized = (key: string) => `optimized-${key}`
+const layerRoute = (key: string) => `route-layer-${key}`
+const layerPoints = (key: string) => `points-layer-${key}`
+const layerLabel = (key: string) => `points-label-${key}`
+const layerOptimized = (key: string) => `optimized-layer-${key}`
+
+const mapReady = ref(false)
+const layerKeys = ref<Set<string>>(new Set())
+
+function orderedVisits(group: VisitGroup): VisitData[] {
+	return [...group.visits].sort((a, b) => a.stop_nr - b.stop_nr)
+}
+
+function isSelected(key: string): boolean {
+	return selectedGroups.value.some((g) => g.key === key)
+}
+
+function isSegmentStart(group: VisitGroup, visit: VisitData, idx: number): boolean {
 	if (idx === 0) return true
-	const prev = orderedVisits.value[idx - 1]
+	const prev = orderedVisits(group)[idx - 1]
 	return prev.segment_index !== visit.segment_index
 }
 
-function isSegmentEnd(visit: VisitData, idx: number): boolean {
-	if (idx === orderedVisits.value.length - 1) return true
-	const next = orderedVisits.value[idx + 1]
+function isSegmentEnd(group: VisitGroup, visit: VisitData, idx: number): boolean {
+	if (idx === orderedVisits(group).length - 1) return true
+	const next = orderedVisits(group)[idx + 1]
 	return next.segment_index !== visit.segment_index
 }
 
-function isLocked(visit: VisitData): boolean {
+function isLocked(group: VisitGroup, visit: VisitData): boolean {
 	return (
 		visit.segment_index !== null &&
-		orderedVisits.value.filter((v) => v.segment_index === visit.segment_index).length === 1
+		orderedVisits(group).filter((v) => v.segment_index === visit.segment_index).length === 1
 	)
 }
 
-function segColor(visit: VisitData): string {
-	if (visit.segment_index === null) return SEGMENT_COLORS[0]
-	return SEGMENT_COLORS[visit.segment_index % SEGMENT_COLORS.length]
-}
-
-function selectGroup(group: VisitGroup) {
-	selectedGroup.value = group
-	optimizedLegs.value = []
+function toggleSelectGroup(group: VisitGroup) {
+	const idx = selectedGroups.value.findIndex((g) => g.key === group.key)
+	if (idx >= 0) {
+		selectedGroups.value.splice(idx, 1)
+		optimizedLegs.value[group.key] = []
+		overrunMap.value[group.key] = false
+	} else {
+		selectedGroups.value.push(group)
+		loadRoute(Number(group.key))
+	}
 	updateMap()
-	loadRoute(Number(group.key))
 }
 
 function formatDate(date: string | null | undefined): string {
@@ -254,13 +268,14 @@ function shortAddress(address: string): string {
 }
 
 async function loadRoute(groupId: number) {
+	const key = String(groupId)
 	try {
 		const route = await visitsApi.getGroupRoute(groupId)
-		optimizedLegs.value = route.geometry.map((g) => decodePolyline(g))
-		overrun.value = route.overrun
+		optimizedLegs.value[key] = route.geometry.map((g) => decodePolyline(g))
+		overrunMap.value[key] = route.overrun
 	} catch (err: any) {
-		optimizedLegs.value = []
-		overrun.value = false
+		optimizedLegs.value[key] = []
+		overrunMap.value[key] = false
 		errorApi.logError(err)
 	}
 	updateMap()
@@ -289,10 +304,10 @@ async function saveSettings() {
 	}
 }
 
-async function afterOrderChange() {
-	if (autoRecompute.value && selectedGroup.value) {
+async function afterOrderChange(group: VisitGroup) {
+	if (autoRecompute.value) {
 		try {
-			await visitsApi.recomputeGroupRoute(Number(selectedGroup.value.key))
+			await visitsApi.recomputeGroupRoute(Number(group.key))
 		} catch (err: any) {
 			error.value = 'Kunne ikke genberegne tider'
 			errorApi.logError(err)
@@ -308,12 +323,12 @@ function toCoord(v: VisitData): [number, number] | null {
 	return [lng, lat]
 }
 
-async function moveUp(visit: VisitData, idx: number) {
+async function moveUp(group: VisitGroup, visit: VisitData, idx: number) {
 	if (idx === 0 || updating) return
 	updating = true
 	try {
-		await visitsApi.reorderVisit(Number(selectedGroup.value!.key), visit.ID, 'up')
-		await afterOrderChange()
+		await visitsApi.reorderVisit(Number(group.key), visit.ID, 'up')
+		await afterOrderChange(group)
 	} catch (err: any) {
 		error.value = 'Fejl ved omordning'
 		errorApi.logError(err)
@@ -322,12 +337,12 @@ async function moveUp(visit: VisitData, idx: number) {
 	}
 }
 
-async function moveDown(visit: VisitData, idx: number) {
-	if (idx === orderedVisits.value.length - 1 || updating) return
+async function moveDown(group: VisitGroup, visit: VisitData, idx: number) {
+	if (idx === orderedVisits(group).length - 1 || updating) return
 	updating = true
 	try {
-		await visitsApi.reorderVisit(Number(selectedGroup.value!.key), visit.ID, 'down')
-		await afterOrderChange()
+		await visitsApi.reorderVisit(Number(group.key), visit.ID, 'down')
+		await afterOrderChange(group)
 	} catch (err: any) {
 		error.value = 'Fejl ved omordning'
 		errorApi.logError(err)
@@ -336,12 +351,12 @@ async function moveDown(visit: VisitData, idx: number) {
 	}
 }
 
-async function splitSegment(visit: VisitData, idx: number) {
-	if (updating || !selectedGroup.value) return
+async function splitSegment(group: VisitGroup, visit: VisitData, idx: number) {
+	if (updating) return
 	updating = true
 	try {
-		await visitsApi.splitSegment(Number(selectedGroup.value.key), visit.ID)
-		await afterOrderChange()
+		await visitsApi.splitSegment(Number(group.key), visit.ID)
+		await afterOrderChange(group)
 	} catch (err: any) {
 		error.value = 'Fejl ved opdeling af segment'
 		errorApi.logError(err)
@@ -350,12 +365,12 @@ async function splitSegment(visit: VisitData, idx: number) {
 	}
 }
 
-async function joinSegment(visit: VisitData, idx: number) {
-	if (updating || !selectedGroup.value) return
+async function joinSegment(group: VisitGroup, visit: VisitData, idx: number) {
+	if (updating) return
 	updating = true
 	try {
-		await visitsApi.joinSegment(Number(selectedGroup.value.key), visit.ID)
-		await afterOrderChange()
+		await visitsApi.joinSegment(Number(group.key), visit.ID)
+		await afterOrderChange(group)
 	} catch (err: any) {
 		error.value = 'Fejl ved sammenlægning af segment'
 		errorApi.logError(err)
@@ -364,22 +379,23 @@ async function joinSegment(visit: VisitData, idx: number) {
 	}
 }
 
-async function optimizeGroup() {
-	if (updating || optimizing.value || !selectedGroup.value) return
+async function optimizeGroup(group: VisitGroup) {
+	if (updating || optimizing.value) return
 	optimizing.value = true
 	error.value = null
+	const key = group.key
 	try {
-		const res = await visitsApi.optimizeGroup(Number(selectedGroup.value.key), {
+		const res = await visitsApi.optimizeGroup(Number(key), {
 			costing: 'auto',
 			mode: 'time',
 		})
-		overrun.value = res.overrun
+		overrunMap.value[key] = res.overrun
 		await refresh()
-		optimizedLegs.value = res.geometry.map((g) => decodePolyline(g))
+		optimizedLegs.value[key] = res.geometry.map((g) => decodePolyline(g))
 		updateMap()
 	} catch (err: any) {
-		optimizedLegs.value = []
-		overrun.value = false
+		optimizedLegs.value[key] = []
+		overrunMap.value[key] = false
 		error.value = 'Optimering fejlede'
 		errorApi.logError(err)
 		updateMap()
@@ -389,8 +405,7 @@ async function optimizeGroup() {
 }
 
 async function refresh() {
-	if (!selectedGroup.value) return
-	optimizedLegs.value = []
+	if (!selectedGroups.value.length) return
 	const all = await visitsApi.getPlanned()
 	const flat: VisitData[] = (all || []).flatMap((k: any) =>
 		(k.visits || []).map((v: any) => ({
@@ -398,10 +413,15 @@ async function refresh() {
 			konsulentName: k.name,
 		})),
 	)
-	const groupVisits = flat.filter((v) => String(v.group_id) === selectedGroup.value!.key)
-	selectedGroup.value.visits = groupVisits
 	groups.value = buildGroups(flat)
-	await loadRoute(Number(selectedGroup.value.key))
+	const keys = selectedGroups.value.map((g) => g.key)
+	selectedGroups.value = keys
+		.map((k) => groups.value.find((g) => g.key === k))
+		.filter(Boolean) as VisitGroup[]
+	optimizedLegs.value = {}
+	overrunMap.value = {}
+	await Promise.all(selectedGroups.value.map((g) => loadRoute(Number(g.key))))
+	updateMap()
 }
 
 function buildGroups(visits: VisitData[]): VisitGroup[] {
@@ -421,8 +441,8 @@ function buildGroups(visits: VisitData[]): VisitGroup[] {
 		.sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
 }
 
-function buildRouteFC(): GeoJSON.FeatureCollection {
-	const list = orderedVisits.value
+function buildRouteFC(group: VisitGroup): GeoJSON.FeatureCollection {
+	const list = orderedVisits(group)
 	const coords = list.map((v) => toCoord(v)).filter(Boolean) as [number, number][]
 	const features: GeoJSON.Feature[] = []
 
@@ -435,7 +455,7 @@ function buildRouteFC(): GeoJSON.FeatureCollection {
 				features.push({
 					type: 'Feature',
 					geometry: { type: 'LineString', coordinates: segCoords },
-					properties: { segment: list[segStart].segment_index ?? 0 },
+					properties: {},
 				})
 			}
 			segStart = i
@@ -449,7 +469,7 @@ function buildRouteFC(): GeoJSON.FeatureCollection {
 		features.push({
 			type: 'Feature',
 			geometry: { type: 'Point', coordinates: c },
-			properties: { id: v.ID, label: String(v.stop_nr), segment: v.segment_index ?? 0 },
+			properties: { id: v.ID, label: String(v.stop_nr) },
 		})
 	})
 
@@ -460,8 +480,8 @@ function emptyFC(): GeoJSON.FeatureCollection {
 	return { type: 'FeatureCollection', features: [] }
 }
 
-function buildOptimizedFC(): GeoJSON.FeatureCollection {
-	const features: GeoJSON.Feature[] = optimizedLegs.value
+function buildOptimizedFC(key: string): GeoJSON.FeatureCollection {
+	const features: GeoJSON.Feature[] = (optimizedLegs.value[key] ?? [])
 		.filter((leg) => leg.length >= 2)
 		.map((leg) => ({
 			type: 'Feature',
@@ -475,21 +495,30 @@ function buildOptimizedFC(): GeoJSON.FeatureCollection {
 }
 
 function updateMap() {
-	// isStyleLoaded() is false during camera transitions (fitBounds), so guard
-	// on the layers we created instead
-	if (!map || !selectedGroup.value || !map.getLayer(LAYER.route)) return
-	const fc = buildRouteFC()
-	const src = map.getSource(SRC.route) as maplibregl.GeoJSONSource | undefined
-	src?.setData(optimizedLegs.value.length ? emptyFC() : fc)
+	if (!map || !mapReady.value || !selectedGroups.value.length) return
+	syncGroupLayers()
 
-	const ptsSrc = map.getSource(SRC.points) as maplibregl.GeoJSONSource | undefined
-	ptsSrc?.setData(fc)
+	for (const group of selectedGroups.value) {
+		const key = group.key
+		const fc = buildRouteFC(group)
+		const src = map.getSource(srcRoute(key)) as maplibregl.GeoJSONSource | undefined
+		src?.setData((optimizedLegs.value[key]?.length ?? 0) ? emptyFC() : fc)
 
-	const optSrc = map.getSource(SRC.optimized) as maplibregl.GeoJSONSource | undefined
-	optSrc?.setData(buildOptimizedFC())
+		const ptsSrc = map.getSource(srcPoints(key)) as maplibregl.GeoJSONSource | undefined
+		ptsSrc?.setData(fc)
 
-	// Fit bounds
-	const coords = orderedVisits.value.map((v) => toCoord(v)).filter(Boolean) as [number, number][]
+		const optSrc = map.getSource(srcOptimized(key)) as maplibregl.GeoJSONSource | undefined
+		optSrc?.setData(buildOptimizedFC(key))
+	}
+
+	// Fit bounds across all selected groups
+	const coords: [number, number][] = []
+	for (const group of selectedGroups.value) {
+		for (const v of orderedVisits(group)) {
+			const c = toCoord(v)
+			if (c) coords.push(c)
+		}
+	}
 	if (coords.length > 0) {
 		const bounds = coords.reduce(
 			(b, c) => b.extend(c),
@@ -499,52 +528,50 @@ function updateMap() {
 	}
 }
 
-function addBaseLayers() {
-	if (!map || !map.isStyleLoaded()) return
+function addGroupLayers(key: string) {
+	if (!map) return
+	const color = groupColor(key)
 
-	// Route layer (per segment color)
-	ensureSource(SRC.route, emptyFC())
-
-	// Use a match expression for segment colors
-	const colors = SEGMENT_COLORS.map((c, i) => [i, c]).flat()
-	ensureLayer(LAYER.route, {
+	ensureSource(srcRoute(key), emptyFC())
+	ensureLayer(layerRoute(key), {
 		type: 'line',
-		source: SRC.route,
+		source: srcRoute(key),
 		paint: {
-			'line-color': ['match', ['get', 'segment'], ...colors, '#6366f1'],
+			'line-color': color,
 			'line-width': 4,
 			'line-opacity': 0.8,
 		},
 		filter: ['==', '$type', 'LineString'],
 	})
 
-	ensureSource(SRC.optimized, emptyFC())
-	ensureLayer(LAYER.optimized, {
+	ensureSource(srcOptimized(key), emptyFC())
+	ensureLayer(layerOptimized(key), {
 		type: 'line',
-		source: SRC.optimized,
+		source: srcOptimized(key),
 		paint: {
 			'line-color': '#2563eb',
 			'line-width': 4,
 			'line-opacity': 0.9,
+			'line-dasharray': [2, 1],
 		},
 		filter: ['==', '$type', 'LineString'],
 	})
 
-	ensureSource(SRC.points, emptyFC())
-	ensureLayer(LAYER.points, {
+	ensureSource(srcPoints(key), emptyFC())
+	ensureLayer(layerPoints(key), {
 		type: 'circle',
-		source: SRC.points,
+		source: srcPoints(key),
 		paint: {
 			'circle-radius': 8,
-			'circle-color': ['match', ['get', 'segment'], ...colors, '#6366f1'],
+			'circle-color': color,
 			'circle-stroke-color': '#ffffff',
 			'circle-stroke-width': 2,
 		},
 		filter: ['==', '$type', 'Point'],
 	})
-	ensureLayer(LAYER.pointsLabel, {
+	ensureLayer(layerLabel(key), {
 		type: 'symbol',
-		source: SRC.points,
+		source: srcPoints(key),
 		layout: {
 			'text-field': ['get', 'label'],
 			'text-size': 11,
@@ -558,6 +585,28 @@ function addBaseLayers() {
 		},
 		filter: ['==', '$type', 'Point'],
 	})
+}
+
+function removeGroupLayers(key: string) {
+	if (!map) return
+	for (const l of [layerLabel(key), layerPoints(key), layerOptimized(key), layerRoute(key)]) {
+		if (map.getLayer(l)) map.removeLayer(l)
+	}
+	for (const s of [srcPoints(key), srcOptimized(key), srcRoute(key)]) {
+		if (map.getSource(s)) map.removeSource(s)
+	}
+}
+
+function syncGroupLayers() {
+	if (!map) return
+	const want = new Set(selectedGroups.value.map((g) => g.key))
+	for (const key of layerKeys.value) {
+		if (!want.has(key)) removeGroupLayers(key)
+	}
+	for (const key of want) {
+		if (!map.getLayer(layerRoute(key))) addGroupLayers(key)
+	}
+	layerKeys.value = want
 }
 
 function ensureSource(id: string, data: GeoJSON.FeatureCollection) {
@@ -602,8 +651,8 @@ onMounted(async () => {
 	})
 
 	map.on('load', () => {
-		addBaseLayers()
-		if (selectedGroup.value) updateMap()
+		mapReady.value = true
+		updateMap()
 	})
 })
 
@@ -754,8 +803,28 @@ onBeforeUnmount(() => {
 	cursor: not-allowed;
 }
 .mr-group-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 	font-weight: 600;
 	color: #374151;
+}
+.mr-group-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	display: inline-block;
+	flex-shrink: 0;
+}
+.mr-overrun {
+	color: #b91c1c;
+	font-size: 12px;
+	font-weight: 600;
+}
+.mr-hint {
+	font-size: 12px;
+	color: #6b7280;
+	margin-bottom: 12px;
 }
 .mr-group-date {
 	color: #6b7280;
