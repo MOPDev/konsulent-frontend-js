@@ -179,8 +179,12 @@ const selectedVisitIds = ref<(number | string)[]>([])
 watch(
 	() => props.modelValue,
 	(newVal) => {
-		console.trace('[Table] modelValue prop changed', newVal) //TODO: REMOVE
-		selectedVisitIds.value = newVal ? [...newVal] : []
+		const next = newVal ? [...newVal] : []
+		// ponytail: shallow compare, stops the modelValue<->emit ping-pong
+		const same =
+			next.length === selectedVisitIds.value.length &&
+			next.every((v, i) => v === selectedVisitIds.value[i])
+		if (!same) selectedVisitIds.value = next
 	},
 	{ immediate: true },
 )
@@ -323,8 +327,6 @@ watch(
 watch(
 	[selectedItems, selectedVisitIds],
 	([items, ids]) => {
-		console.trace('[Table] emitting update:modelValue', ids) //TODO: REMOVE
-
 		emit('selection-changed', items)
 		emit('selection-ids-changed', ids)
 		emit('update:selectedItems', items)
