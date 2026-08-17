@@ -213,11 +213,14 @@ const LAYER = {
 	drawVerts: 'draw-verts',
 }
 
-watch(selectedVisitIds, (ids) => {
+watch(selectedVisitIds, (ids, oldIds) => {
+	const same = ids.length === oldIds.length && ids.every((v, i) => v === oldIds[i])
+	if (same) return
 	emit('selection-changed', ids)
 	emit('update:modelValue', ids)
 	if (map?.isStyleLoaded()) updateSelSource()
 })
+
 watch(
 	() => props.modelValue,
 	(ids) => {
