@@ -94,6 +94,11 @@ interface VisitData {
 
 const router = useRouter()
 const selectedVisits = ref<(number | string)[]>([])
+watch(selectedVisits, (val) => {
+	// TODO: REMOVE
+	console.trace('[Parent] selectedVisits changed', val)
+})
+
 const selectedUser = ref<string>('')
 const selectedDate = ref<string>('')
 const selectedDebtors = ref<Record<number, number[]>>({})

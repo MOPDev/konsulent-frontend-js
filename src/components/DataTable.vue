@@ -179,6 +179,7 @@ const selectedVisitIds = ref<(number | string)[]>([])
 watch(
 	() => props.modelValue,
 	(newVal) => {
+		console.trace('[Table] modelValue prop changed', newVal) //TODO: REMOVE
 		selectedVisitIds.value = newVal ? [...newVal] : []
 	},
 	{ immediate: true },
@@ -322,6 +323,8 @@ watch(
 watch(
 	[selectedItems, selectedVisitIds],
 	([items, ids]) => {
+		console.trace('[Table] emitting update:modelValue', ids) //TODO: REMOVE
+
 		emit('selection-changed', items)
 		emit('selection-ids-changed', ids)
 		emit('update:selectedItems', items)
