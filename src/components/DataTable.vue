@@ -179,7 +179,7 @@ const selectedVisitIds = ref<(number | string)[]>([])
 watch(
 	() => props.modelValue,
 	(newVal) => {
-		selectedVisitIds.value = newVal || []
+		selectedVisitIds.value = newVal ? [...newVal] : []
 	},
 	{ immediate: true },
 )
@@ -293,8 +293,12 @@ function toggleSelection(item: DataItem, checked: boolean): void {
 	const idx = paginatedData.value.findIndex((x) => x.ID === id)
 
 	if (checked) {
-		if (!selectedVisitIds.value.includes(id)) selectedVisitIds.value.push(id)
-		if (!selectedItems.value.includes(idx)) selectedItems.value.push(idx)
+		if (!selectedVisitIds.value.includes(id)) {
+			selectedVisitIds.value = [...selectedVisitIds.value, id]
+		}
+		if (!selectedItems.value.includes(idx)) {
+			selectedItems.value = [...selectedItems.value, idx]
+		}
 	} else {
 		selectedVisitIds.value = selectedVisitIds.value.filter((x) => x !== id)
 		selectedItems.value = selectedItems.value.filter((i) => i !== idx)
@@ -322,6 +326,7 @@ watch(
 		emit('selection-ids-changed', ids)
 		emit('update:selectedItems', items)
 		emit('update:selectedVisitIds', ids)
+		emit('update:modelValue', ids)
 	},
 	{ deep: true },
 )
