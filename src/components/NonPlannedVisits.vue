@@ -176,53 +176,6 @@ const fetchCreatedVisits = async () => {
 	}
 }
 
-const handlePlanVisits = async () => {
-	if (!authStore.isAuthenticated) {
-		error.value = 'Du skal være logget ind'
-		router.push('/login')
-		return
-	}
-
-	try {
-		isPlanning.value = true
-		error.value = ''
-
-		const planData = {
-			visitIds: selectedVisits.value.map((v) => Number(v)),
-			userId: selectedUser.value,
-			date: selectedDate.value,
-		}
-		console.log(planData)
-		const blob = (await visitsApi.generateVisitFile(planData)) as Blob
-		const url = window.URL.createObjectURL(blob)
-		const link = document.createElement('a')
-		link.href = url
-		link.download = 'visits' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.xlsx'
-		document.body.appendChild(link)
-		link.click()
-		document.body.removeChild(link)
-		window.URL.revokeObjectURL(url)
-
-		selectedVisits.value = []
-		selectedUser.value = ''
-		selectedDate.value = ''
-		await fetchCreatedVisits()
-
-		console.log('Planning successful')
-	} catch (err: any) {
-		errorApi.log('Error planning visits: ' + err.message)
-		console.error('Planning failed:', err)
-		if (err.response?.status === 401) {
-			authStore.logout()
-			error.value = 'Session udløbet. Log ind igen.'
-		} else {
-			error.value = err.response?.data?.message || 'Planning failed. Try again.'
-		}
-	} finally {
-		isPlanning.value = false
-	}
-}
-
 const fetchUsers = async () => {
 	try {
 		users.value = await usersApi.getAll()

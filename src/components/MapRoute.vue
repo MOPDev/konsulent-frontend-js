@@ -69,15 +69,29 @@ Segmenter oprettes ved at trykke på de 2 vertikale streger til venstre."
 						</span>
 						<span class="mr-group-date">{{ formatDate(group.date) }}</span>
 						<span v-if="overrunMap[group.key]" class="mr-overrun">Over tid</span>
-						<button
-							v-if="isSelected(group.key)"
-							class="mr-optimize"
-							:disabled="optimizing"
-							title="Optimér ruten"
-							@click.stop="optimizeGroup(group)"
-						>
-							{{ optimizing ? '…' : 'Optimér' }}
-						</button>
+						<div v-if="isSelected(group.key)" class="mr-opt-row" @click.stop>
+							<div class="mr-split-btn">
+								<button
+									class="mr-optimize"
+									:disabled="optimizing"
+									title="Optimér ruten"
+									@click="optimizeGroup(group, 'time')"
+								>
+									{{ optimizing ? '…' : 'Optimér' }}
+								</button>
+								<button
+									class="mr-opt-caret"
+									:disabled="optimizing"
+									title="Flere optimeringsvalg"
+									@click="toggleOptMenu(group)"
+								>
+									▾
+								</button>
+								<div v-if="openOptMenu === group.key" class="mr-opt-menu">
+									<button @click="pickFreeOpt(group)">Fri optimering</button>
+								</div>
+							</div>
+						</div>
 					</div>
 					<div v-if="isSelected(group.key)" class="mr-visits">
 						<div
@@ -155,7 +169,6 @@ import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { styleUrl } from '@/api/maptiler'
 import { visitsApi } from '@/api/visits'
-import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 import { decodePolyline } from '@/utils/polyline'
 import type { RouteSettings } from '@/schemas'
@@ -203,6 +216,8 @@ const settings = ref<RouteSettings>({
 const savingSettings = ref(false)
 const settingsSaved = ref(false)
 const autoRecompute = ref(false)
+
+const openOptMenu = ref<string | null>(null)
 
 const GROUP_COLORS = [
 	'#6366f1',
@@ -257,6 +272,15 @@ function isLocked(group: VisitGroup, visit: VisitData): boolean {
 		visit.segment_index !== null &&
 		orderedVisits(group).filter((v) => v.segment_index === visit.segment_index).length === 1
 	)
+}
+
+function pickFreeOpt(group: VisitGroup) {
+	openOptMenu.value = null
+	optimizeGroup(group, 'free')
+}
+
+function toggleOptMenu(group: VisitGroup) {
+	openOptMenu.value = openOptMenu.value === group.key ? null : group.key
 }
 
 function toggleSelectGroup(group: VisitGroup) {
@@ -371,7 +395,7 @@ async function moveDown(group: VisitGroup, visit: VisitData, idx: number) {
 	}
 }
 
-async function splitSegment(group: VisitGroup, visit: VisitData, idx: number) {
+async function splitSegment(group: VisitGroup, visit: VisitData, _idx: number) {
 	if (updating) return
 	updating = true
 	try {
@@ -385,7 +409,7 @@ async function splitSegment(group: VisitGroup, visit: VisitData, idx: number) {
 	}
 }
 
-async function joinSegment(group: VisitGroup, visit: VisitData, idx: number) {
+async function joinSegment(group: VisitGroup, visit: VisitData, _idx: number) {
 	if (updating) return
 	updating = true
 	try {
@@ -399,7 +423,7 @@ async function joinSegment(group: VisitGroup, visit: VisitData, idx: number) {
 	}
 }
 
-async function optimizeGroup(group: VisitGroup) {
+async function optimizeGroup(group: VisitGroup, mode: 'time' | 'free') {
 	if (updating || optimizing.value) return
 	optimizing.value = true
 	error.value = null
@@ -407,7 +431,7 @@ async function optimizeGroup(group: VisitGroup) {
 	try {
 		const res = await visitsApi.optimizeGroup(Number(key), {
 			costing: 'auto',
-			mode: 'time',
+			mode,
 		})
 		overrunMap.value[key] = res.overrun
 		await refresh()
@@ -822,6 +846,55 @@ onBeforeUnmount(() => {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
+.mr-split-btn {
+	position: relative;
+	display: flex;
+	margin-left: 8px;
+}
+.mr-split-btn .mr-optimize {
+	margin-left: 0;
+	border-radius: 4px 0 0 4px;
+}
+.mr-opt-caret {
+	padding: 2px 6px;
+	font-size: 11px;
+	color: #1d4ed8;
+	background: #dbeafe;
+	border: 1px solid #93c5fd;
+	border-left: none;
+	border-radius: 0 4px 4px 0;
+	cursor: pointer;
+}
+.mr-opt-caret:hover:not(:disabled) {
+	background: #bfdbfe;
+}
+.mr-opt-menu {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	z-index: 10;
+	margin-top: 2px;
+	background: white;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+	white-space: nowrap;
+}
+.mr-opt-menu button {
+	display: block;
+	width: 100%;
+	padding: 6px 12px;
+	font-size: 12px;
+	text-align: left;
+	color: #374151;
+	background: white;
+	border: none;
+	cursor: pointer;
+}
+.mr-opt-menu button:hover {
+	background: #f3f4f6;
+}
+
 .mr-group-title {
 	display: flex;
 	align-items: center;

@@ -160,8 +160,8 @@ function openGeoPopup(visitId: number, lng: number, lat: number) {
 										.filter(Boolean)
 										.join(', ') || q,
 					}))
-					geoList = results
-					geoQuery = q
+					// geoList = results
+					// geoQuery = q
 					renderGeoResults(results, q)
 				})
 				.catch(() => renderGeoResults([], q))
@@ -195,8 +195,8 @@ function closeGeoPopup() {
 }
 
 // hoisted for closure — no reactive needed, popup DOM is imperative
-let geoList: { lat: number; lng: number; label: string }[] = []
-let geoQuery = ''
+// let geoList: { lat: number; lng: number; label: string }[] = []
+// let geoQuery = ''
 
 const SRC = {
 	visits: 'visits-src',
