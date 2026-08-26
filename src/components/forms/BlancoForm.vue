@@ -88,7 +88,7 @@
 
 						<!-- ponytail: replace min/max inputs with MoneyRangeSelector for tablet-friendly slider UI -->
 						<MoneyRangeSelector
-							label="Månedsløn (Netto, kr.)"
+							label="Månedsløn (Netto, efter skat, kr.)"
 							name="net_salary"
 							v-model:modelValueMin="fd.monetary.net_salary_min"
 							v-model:modelValueMax="fd.monetary.net_salary_max"

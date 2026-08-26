@@ -122,7 +122,7 @@ export const visitsApi = {
 	joinSegment: (groupId: number, visitId: number) =>
 		client.post(`/visits/group/${groupId}/join`, { visitId }),
 
-	optimizeGroup: (groupId: number, opts?: { costing?: string; mode?: string }) =>
+	optimizeGroup: (groupId: number, opts?: { costing?: string; mode?: string; freeEndpoints?: boolean }) =>
 		client.post(`/visits/group/${groupId}/optimize`, opts ?? {}, OptimizeResponseSchema),
 
 	// --- Route planning settings ---

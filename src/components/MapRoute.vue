@@ -428,10 +428,12 @@ async function optimizeGroup(group: VisitGroup, mode: 'time' | 'free') {
 	optimizing.value = true
 	error.value = null
 	const key = group.key
+	const freeEndpoints = mode === 'free'
 	try {
 		const res = await visitsApi.optimizeGroup(Number(key), {
 			costing: 'auto',
-			mode,
+			mode: 'time',
+			freeEndpoints,
 		})
 		overrunMap.value[key] = res.overrun
 		await refresh()
