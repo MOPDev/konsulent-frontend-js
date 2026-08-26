@@ -5,13 +5,13 @@
 			<p>De mangler at få en dato for besøg og hvem der skal til at besøge dem</p>
 
 			<form
-				@submit.prevent="handlePlanVisits"
+				@submit.prevent="handleCreateGroup(selectedVisits.map(Number))"
 				class="planning-form"
 				style="margin-bottom: 10px; margin-top: 10px"
 			>
 				<div class="form-row">
 					<button type="submit" :disabled="!selectedVisits.length || isPlanning">
-						Planlæg Valgte Besøg
+						Opret Gruppe
 					</button>
 				</div>
 			</form>

@@ -18,6 +18,17 @@
 					<input type="number" v-model.number="settings.service_minutes" min="1" />
 					min
 				</label>
+				<span
+					style="cursor: help"
+					class="mr-info-icon"
+					title="Tryk på en af grupperne for at vise dens rute. Flere grupper kan vises samtidigt. 
+Ved planlægning af besøg, så er det første besøg låst fast i ordenen. 
+Sidste besøg kan låses ved at trykke på de 2 vertikale streger til venstre.
+Besøg er opdelt i segmenter, hvor første besøg er låst fast i ordenen.
+Segmenter oprettes ved at trykke på de 2 vertikale streger til venstre."
+					>ⓘ</span
+				>
+
 				<label class="mr-setting">
 					Slut
 					<input type="time" v-model="settings.end_time" />
@@ -38,7 +49,9 @@
 						Auto-opdater tider
 					</label>
 				</div>
-				<div class="mr-hint">Klik på en gruppe for at vise ruten. Klik på flere for at sammenligne.</div>
+				<div class="mr-hint">
+					Klik på en gruppe for at vise ruten. Klik på flere for at sammenligne.
+				</div>
 				<div v-if="error" class="mr-error">{{ error }}</div>
 				<div v-for="group in groups" :key="group.key" class="mr-group">
 					<div
@@ -47,7 +60,10 @@
 						@click="toggleSelectGroup(group)"
 					>
 						<span class="mr-group-title">
-							<span class="mr-group-dot" :style="{ background: groupColor(group.key) }"></span>
+							<span
+								class="mr-group-dot"
+								:style="{ background: groupColor(group.key) }"
+							></span>
 							{{ group.visits[0]?.konsulentName || 'Ikke tildelt konsulent' }} —
 							{{ group.visits.length }} besøg
 						</span>
@@ -79,13 +95,17 @@
 								<span class="mr-time">{{ visit.visit_time || '–' }}</span>
 								<span class="mr-sagsnr">{{ visit.sagsnr }}</span>
 								<span class="mr-addr">{{ shortAddress(visit.address) }}</span>
-								<span v-if="isSegmentStart(group, visit, idx)" class="badge badge-start"
+								<span
+									v-if="isSegmentStart(group, visit, idx)"
+									class="badge badge-start"
 									>START</span
 								>
 								<span v-if="isSegmentEnd(group, visit, idx)" class="badge badge-end"
 									>SLUT</span
 								>
-								<span v-if="isLocked(group, visit)" class="badge badge-locked">LÅST</span>
+								<span v-if="isLocked(group, visit)" class="badge badge-locked"
+									>LÅST</span
+								>
 							</div>
 							<div class="mr-visit-actions">
 								<button
