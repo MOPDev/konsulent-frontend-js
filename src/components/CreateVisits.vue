@@ -193,25 +193,7 @@ const createVisits = async () => {
 
 async function sendToBackend(geocodedVisits: GeocodedVisit[]) {
 	try {
-		const response = await api.post('/visits/create', geocodedVisits, {
-			responseType: 'blob',
-		})
-
-		const blob = new Blob([response.data], {
-			type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-		})
-		const url = window.URL.createObjectURL(blob)
-		const link = document.createElement('a')
-		link.href = url
-		link.download =
-			'visits' +
-			new Date().toISOString().slice(0, 10).replace(/-/g, '') +
-			(selectedVisitTypeObject.value?.text ?? '') +
-			'.xlsx'
-		document.body.appendChild(link)
-		link.click()
-		document.body.removeChild(link)
-		window.URL.revokeObjectURL(url)
+		await api.post('/visits/create', geocodedVisits)
 
 		if (dataTableRef.value) {
 			dataTableRef.value.clearSelection()
