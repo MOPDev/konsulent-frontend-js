@@ -1,7 +1,6 @@
 <template>
 	<div>
 		<div v-if="!visitData">Indlæser...</div>
-		<div v-if="isSubmitting">Indsender...</div>
 
 		<PurchaseForm
 			v-if="visitData?.type?.ID === 1"
@@ -52,7 +51,17 @@
     /leasing 2
     blanco 3
     brev 4
-    --></div>
+    -->
+
+		<Teleport to="body">
+			<div v-if="isSubmitting" class="submit-overlay" role="status" aria-live="polite">
+				<div class="submit-overlay__box">
+					<span class="submit-overlay__spinner" aria-hidden="true"></span>
+					<p class="submit-overlay__text">{{ submitStage }}</p>
+				</div>
+			</div>
+		</Teleport>
+	</div>
 </template>
 
 <script setup lang="ts">
@@ -152,6 +161,7 @@ const route = useRoute()
 const ID = Number(route.params.id)
 const visitData = ref<(VisitWithDebitors & { debt?: any }) | null>(null)
 const isSubmitting = ref<boolean>(false)
+const submitStage = ref<string>('')
 const isCapturingLocation = ref<boolean>(false)
 const debtData = ref<any>(null)
 const restgadoAntagetVal = ref<number>(0)
@@ -365,6 +375,8 @@ async function submitForm(visitId: number) {
 		const now = new Date()
 		const duration = (now as any) - (startTime.value as any)
 
+		submitStage.value = 'Sender formularen...'
+
 		if (visitData.value?.type?.ID === 1) {
 			formData.asset.contract_type = 'Købekontrakt'
 		} else if (visitData.value?.type?.ID === 2) {
@@ -418,6 +430,7 @@ async function submitForm(visitId: number) {
 
 		// Stage 2: upload visit images — collect per-file failures instead of aborting
 		if (formData.images.length) {
+			submitStage.value = `Uploader ${formData.images.length} billede${formData.images.length > 1 ? 'r' : ''}...`
 			const results = await Promise.allSettled(
 				formData.images.map((img, i) => {
 					const fd = new FormData()
@@ -460,6 +473,7 @@ async function submitForm(visitId: number) {
 			.filter((pair: { asset: any; match: OtherAsset | undefined }) => pair.match?.image?.file)
 
 		if (assetPairs.length) {
+			submitStage.value = `Uploader ${assetPairs.length} bilbillede${assetPairs.length > 1 ? 'r' : ''}...`
 			const results = await Promise.allSettled(
 				assetPairs.map((pair: { asset: any; match: OtherAsset | undefined }) => {
 					const fd = new FormData()
@@ -483,6 +497,7 @@ async function submitForm(visitId: number) {
 		}
 
 		// Stage 4: mark the response complete
+		submitStage.value = 'Afslutter indsendelsen...'
 		await api.post(`/visit-response/${data.ID}/complete`)
 		sendBack()
 	} catch (err: any) {
@@ -493,6 +508,7 @@ async function submitForm(visitId: number) {
 		alert('Noget gik galt: ' + (err?.message || 'Ukendt fejl') + ' Prøv igen.')
 	} finally {
 		isSubmitting.value = false
+		submitStage.value = ''
 	}
 }
 
@@ -600,3 +616,48 @@ function sendBack() {
 	}
 }
 </script>
+
+<style scoped>
+.submit-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 2000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.55);
+}
+
+.submit-overlay__box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20px;
+	padding: 40px 56px;
+	border-radius: 16px;
+	background: #fff;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.submit-overlay__spinner {
+	width: 64px;
+	height: 64px;
+	border: 6px solid rgba(37, 99, 235, 0.2);
+	border-top-color: #2563eb;
+	border-radius: 50%;
+	animation: submit-overlay-spin 0.8s linear infinite;
+}
+
+.submit-overlay__text {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: #1f2937;
+}
+
+@keyframes submit-overlay-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+</style>

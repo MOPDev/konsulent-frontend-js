@@ -1,11 +1,15 @@
 import { client } from './client'
-import { UserWithoutVisitsSchema } from '@/schemas'
+import { UserWithoutVisitsSchema, UserWithVisitsSchema } from '@/schemas'
 import { z } from 'zod'
 
 const UsersResponseSchema = z.object({ users: UserWithoutVisitsSchema.array() })
+const MineResponseSchema = z.object({ user: UserWithVisitsSchema })
 
 export const usersApi = {
 	getAll: () => client.get('/users', UsersResponseSchema).then((r) => r.users),
+
+	getUser: (userid: number) =>
+		client.get(`/visit-response/${userid}/user`, MineResponseSchema).then((r) => r.user),
 
 	create: (data: {
 		username: string

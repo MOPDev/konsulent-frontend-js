@@ -18,36 +18,29 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import api from '@/utils/axios'
+import { usersApi } from '@/api/users'
 import { errorApi } from '@/utils/axios'
 import AuditorInformation from '@/components/AuditorInformation.vue'
-import type { UserWithVisits } from '@/schemas/index.js'
-
-type Auditor = UserWithVisits
+import type { UserWithVisits } from '@/schemas/index.ts'
+const auditor = ref<UserWithVisits | null>(null)
 
 const route = useRoute()
-
-const auditor = ref<Auditor | null>(null)
-
-const ID = Number(route.params.id)
+const auditorId = Number(route.params.id)
 
 const expanded = ref<boolean>(false)
 function toggleExpanded() {
 	expanded.value = !expanded.value
 }
 
-function fetchAuditor() {
-	api.get('/visit-response/all')
-		.then((response) => {
-			auditor.value = response.data.users.find((user: Auditor) => user.ID === ID) ?? null
-		})
-		.catch((error: any) => {
-			console.error('Error fetching auditor data:', error)
-			errorApi.log('Error fetching auditor data: ' + error.message)
-		})
-}
-
-fetchAuditor()
+usersApi
+	.getUser(auditorId)
+	.then((response) => {
+		auditor.value = response
+	})
+	.catch((error: any) => {
+		console.error('Error fetching auditor data:', error)
+		errorApi.log('Error fetching auditor data: ' + error.message)
+	})
 </script>
 
 <style scoped>
