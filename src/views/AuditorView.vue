@@ -6,7 +6,7 @@
 		<div v-if="expanded && auditor" class="auditor-details">
 			<p>telefonnr: {{ auditor.phone }}</p>
 			<p>Mail: {{ auditor.email }}</p>
-			<p>id: {{ ID }}</p>
+			<p>id: {{ auditorId }}</p>
 		</div>
 		<div style="width: 100%">
 			<AuditorInformation v-if="auditor" :auditor="auditor" />
