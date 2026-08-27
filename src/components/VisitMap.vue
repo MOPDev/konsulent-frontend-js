@@ -9,14 +9,9 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { styleUrl } from '@/api/maptiler'
+import type { VisitWithDebitors } from '@/api/visits'
 
-interface MapVisit {
-	ID: number
-	latitude: string | number
-	longitude: string | number
-	stop_nr?: number | null
-	segment_index?: number | null
-}
+type MapVisit = VisitWithDebitors & { konsulentName: string }
 
 const props = withDefaults(
 	defineProps<{
@@ -38,6 +33,7 @@ const emit = defineEmits<{
 
 const mapContainer = ref<HTMLElement>()
 let map: maplibregl.Map | null = null
+let popup: maplibregl.Popup | null = null
 
 const SRC = { visits: 'visits-src', route: 'route-src' }
 const LAYER = { visits: 'visits-layer', route: 'route-layer' }
@@ -49,6 +45,13 @@ function toCoord(v: MapVisit): [number, number] | null {
 	return [lng, lat]
 }
 
+function formatDate(date: string | null | undefined): string {
+	if (!date) return ''
+	const d = new Date(date)
+	if (isNaN(d.getTime())) return ''
+	return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
+}
+
 function buildVisitsFC(): GeoJSON.FeatureCollection {
 	const features = props.visits
 		.map((v) => {
@@ -57,7 +60,7 @@ function buildVisitsFC(): GeoJSON.FeatureCollection {
 			return {
 				type: 'Feature' as const,
 				geometry: { type: 'Point' as const, coordinates: c },
-				properties: { id: v.ID, stop_nr: v.stop_nr, segment_index: v.segment_index },
+				properties: { ...v },
 			}
 		})
 		.filter(Boolean) as GeoJSON.Feature[]
@@ -148,8 +151,31 @@ onMounted(() => {
 		addBaseLayers()
 
 		map!.on('click', LAYER.visits, (e) => {
-			const id = e.features?.[0]?.properties?.id
+			const feature = e.features?.[0]
+			if (!feature) return
+			const p = feature.properties
+			const id = p?.ID
 			if (id != null) emit('visit-click', Number(id))
+
+			const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice()
+			const date = formatDate(p?.visit_date as string | null | undefined)
+			const address = (p?.address as string) || ''
+			const name = (p?.konsulentName as string) || ''
+			const sagsnr = (p?.sagsnr as number | null) || ''
+
+			const html = `
+				<div style="font-size:0.875rem;line-height:1.4">
+					${date ? `<div><strong>${date}</strong></div>` : ''}
+					${address ? `<div>${address}</div>` : ''}
+					${name ? `<div>${name}</div>` : ''}
+					<div style="color:#6b7280;font-size:0.75rem;margin-top:0.25rem">Sagsnr: ${sagsnr}, ID: ${id}</div>
+				</div>
+			`
+			popup?.remove()
+			popup = new maplibregl.Popup({ offset: 25 })
+				.setLngLat(coordinates as [number, number])
+				.setHTML(html)
+				.addTo(map!)
 		})
 		map!.on('mouseenter', LAYER.visits, () => {
 			if (map) map.getCanvas().style.cursor = 'pointer'
