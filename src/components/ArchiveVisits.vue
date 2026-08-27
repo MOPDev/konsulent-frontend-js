@@ -1,6 +1,7 @@
 <template>
 	<div style="margin: 2rem">
 		<VisitMap
+			style="height: 700px; width: 70%; float: right"
 			:visits="visits"
 			:mode="mode"
 			:showRoute="showRoute"
@@ -98,7 +99,7 @@ interface VisitGroup {
 const mode = ref<'view' | 'group'>('view')
 const showRoute = ref(false)
 const center: [number, number] = [11.5, 56.3]
-const zoom = 6
+const zoom = 6 // larger number means more zoomed in
 
 const columns: Column[] = [
 	{ key: 'ID', label: 'ID', sortable: true, filterable: true },

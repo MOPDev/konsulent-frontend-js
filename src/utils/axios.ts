@@ -19,19 +19,46 @@ api.interceptors.response.use(
 	},
 )
 
+export interface ErrorLogContext {
+	step?: string
+	url?: string
+	method?: string
+	status?: number
+	visitId?: number | string
+	userId?: number | string
+	responseId?: number | null
+	fileName?: string
+	fileSize?: number
+	[key: string]: unknown
+}
+
 export const errorApi = {
-	log: (errorText: string) => {
-		return api.post('/error', { text: errorText })
+	log: (errorText: string, context?: ErrorLogContext) => {
+		const payload: Record<string, unknown> = { text: errorText }
+		if (context) {
+			payload.context = context
+			payload.timestamp = new Date().toISOString()
+			payload.userAgent = navigator.userAgent
+		}
+		return api.post('/error', payload)
 	},
 
-	logError: async (error: any) => {
+	logError: (error: any, context?: ErrorLogContext) => {
 		const errorMessage =
-			error.response?.data?.error ||
-			error.response?.data?.message ||
-			error.message ||
+			error?.response?.data?.error ||
+			error?.response?.data?.message ||
+			error?.message ||
 			String(error)
 
-		return errorApi.log(errorMessage)
+		return errorApi.log(errorMessage, {
+			status: error?.response?.status,
+			url: error?.config?.url,
+			method:
+				typeof error?.config?.method === 'string'
+					? error.config.method.toUpperCase()
+					: undefined,
+			...context,
+		})
 	},
 }
 

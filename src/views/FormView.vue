@@ -346,11 +346,21 @@ function fixMinMax(min: number | null, max: number | null): [number | null, numb
 }
 
 async function submitForm(visitId: number) {
+	if (isSubmitting.value) return
 	if (formData.asset.asset_seen && formData.images.length === 0) {
 		alert('Du skal tilføje mindst ét billede når køretøjet er til stede.')
 		return
 	}
+
+	const logContext = (extra: Record<string, unknown> = {}) => ({
+		visitId,
+		userId: visitData.value?.user?.ID,
+		...extra,
+	})
+
 	isSubmitting.value = true
+	let responseId: number | null = null
+
 	try {
 		const now = new Date()
 		const duration = (now as any) - (startTime.value as any)
@@ -399,10 +409,16 @@ async function submitForm(visitId: number) {
 			other_assets: formData.other_assets,
 			comments: formData.comments,
 		}
+		// Stage 1: create/upsert the visit response
 		const { data } = await api.post('/visit-response/create', payload)
+		if (!data?.ID) {
+			throw new Error('Backend returnerede ikke et ID for visit response')
+		}
+		responseId = data.ID
 
-		if (formData.images.length && data.ID) {
-			await Promise.all(
+		// Stage 2: upload visit images — collect per-file failures instead of aborting
+		if (formData.images.length) {
+			const results = await Promise.allSettled(
 				formData.images.map((img, i) => {
 					const fd = new FormData()
 					fd.append('visit_response_id', String(data.ID))
@@ -413,36 +429,68 @@ async function submitForm(visitId: number) {
 					})
 				}),
 			)
+			const failed = results
+				.map((r, i) => ({ r, img: formData.images[i] }))
+				.filter((x) => x.r.status === 'rejected')
+			failed.forEach(({ r, img }) => {
+				errorApi
+					.logError(
+						(r as PromiseRejectedResult).reason,
+						logContext({
+							step: 'upload-image',
+							fileName: img?.name,
+							fileSize: img?.file.size,
+						}),
+					)
+					.catch(() => {})
+			})
+			if (failed.length) {
+				throw new Error(
+					`Kunne ikke uploade ${failed.length} af ${formData.images.length} billeder`,
+				)
+			}
 		}
 
-		if (data.other_assets?.length) {
-			await Promise.all(
-				data.other_assets
-					.map((asset: any) => ({
-						asset,
-						match: formData.other_assets.find(
-							(a: OtherAsset) => a.regnr === asset.regnr,
-						),
-					}))
-					.filter(
-						(pair: { asset: any; match: OtherAsset | undefined }) =>
-							pair.match?.image?.file,
-					)
-					.map((pair: { asset: any; match: OtherAsset | undefined }) => {
-						const fd = new FormData()
-						fd.append('image', pair.match!.image!.file)
-						return api.post(`/asset/${pair.asset.ID}/image`, fd, {
-							headers: { 'Content-Type': undefined },
-						})
-					}),
+		// Stage 3: upload other-asset images
+		const assetPairs = (data.other_assets || [])
+			.map((asset: any) => ({
+				asset,
+				match: formData.other_assets.find((a: OtherAsset) => a.regnr === asset.regnr),
+			}))
+			.filter((pair: { asset: any; match: OtherAsset | undefined }) => pair.match?.image?.file)
+
+		if (assetPairs.length) {
+			const results = await Promise.allSettled(
+				assetPairs.map((pair: { asset: any; match: OtherAsset | undefined }) => {
+					const fd = new FormData()
+					fd.append('image', pair.match!.image!.file)
+					return api.post(`/asset/${pair.asset.ID}/image`, fd, {
+						headers: { 'Content-Type': undefined },
+					})
+				}),
 			)
+			const failed = results.filter((r) => r.status === 'rejected')
+			failed.forEach((r) => {
+				errorApi
+					.logError((r as PromiseRejectedResult).reason, logContext({ step: 'upload-asset-image' }))
+					.catch(() => {})
+			})
+			if (failed.length) {
+				throw new Error(
+					`Kunne ikke uploade ${failed.length} af ${assetPairs.length} bilbilleder`,
+				)
+			}
 		}
+
+		// Stage 4: mark the response complete
 		await api.post(`/visit-response/${data.ID}/complete`)
 		sendBack()
 	} catch (err: any) {
 		console.error('Error submitting form:', err)
-		await errorApi.log('Form submission failed: ' + err.message)
-		alert('Noget gik galt: ' + err.message + ' Prøv igen.')
+		errorApi
+			.logError(err, logContext({ step: 'submit', responseId }))
+			.catch((logErr) => console.error('Error logging submission failure:', logErr))
+		alert('Noget gik galt: ' + (err?.message || 'Ukendt fejl') + ' Prøv igen.')
 	} finally {
 		isSubmitting.value = false
 	}
