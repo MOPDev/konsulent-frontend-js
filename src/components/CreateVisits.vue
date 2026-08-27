@@ -1,13 +1,31 @@
 <template>
 	<div v-if="availableVisits.length > 0">
-		<button @click="createVisits" :disabled="isCreateDisabled">Opret besøg</button>
-		<!-- visit_type selection drop down menu -->
-		<select v-model="selectedVisitType">
-			<option v-for="type in visitTypes" :key="type.ID" :value="type.ID">
-				{{ type.text }}
-			</option>
-		</select>
-		<p>Valgt: {{ selectedVisitIds.length }} besøg</p>
+		<div style="display: flex; gap: 10rem; align-items: flex-start">
+			<div>
+				<button @click="createVisits" :disabled="isCreateDisabled">Opret besøg</button>
+				<!-- visit_type selection drop down menu -->
+				<select v-model="selectedVisitType">
+					<option v-for="type in visitTypes" :key="type.ID" :value="type.ID">
+						{{ type.text }}
+					</option>
+				</select>
+				<p>Valgt: {{ selectedVisitIds.length }} besøg</p>
+			</div>
+			<div>
+				<textarea
+					v-model="sagsnrInput"
+					placeholder="Indtast sagsnr, et pr. linje eller kommasepareret (f.eks. fra Excel)"
+					rows="1"
+					cols="50"
+				></textarea>
+				<button @click="fetchBySagsnr" :disabled="!parsedSagsnr.length">
+					Hent besøg ({{ parsedSagsnr.length }})
+				</button>
+				<p v-if="invalidTokens.length" class="warning">
+					Ignorerede ugyldige værdier: {{ invalidTokens.join(', ') }}
+				</p>
+			</div>
+		</div>
 
 		<DataTable
 			ref="dataTableRef"
@@ -98,6 +116,20 @@ const visitTypes = ref<VisitType[]>([])
 const showGeocodeModal = ref(false)
 const pendingGeocodeVisits = ref<AvailableVisit[]>([])
 
+// model for the sagsnr input field
+const sagsnrInput = ref('')
+
+const tokens = computed(() =>
+	sagsnrInput.value
+		.split(/[\s,;]+/)
+		.map((t) => t.trim())
+		.filter((t) => t.length > 0),
+)
+
+const parsedSagsnr = computed(() => tokens.value.filter((t) => /^\d+$/.test(t)).map(Number))
+
+const invalidTokens = computed(() => tokens.value.filter((t) => !/^\d+$/.test(t)))
+
 const selectedVisitTypeObject = computed(() => {
 	if (!selectedVisitType.value) return null
 	return visitTypes.value.find((type) => type.ID === selectedVisitType.value) ?? null
@@ -124,40 +156,53 @@ const getVisitKey = (visit: any): string => {
 
 const SCB_NAME = 'Santander Consumer Bank'
 const NFD_NAME = 'Nordea Finans Danmark'
+function processVisits(raw: any[]) {
+	const sorted = [...raw].sort((a, b) => Number(a.sagsnr) - Number(b.sagsnr))
+
+	const withRef = sorted.map((visit) => {
+		const normalizedKlientnavn = visit.klientnavn.replace(/\r\n/g, ' ').trim()
+		const klientRef = normalizedKlientnavn.includes(SCB_NAME)
+			? `SCB - ${visit.sagvedr}`
+			: normalizedKlientnavn.includes(NFD_NAME)
+				? `NFD`
+				: normalizedKlientnavn
+
+		return { ...visit, klientRef, klientnavn: klientRef }
+	})
+
+	selectedDebtors.value = {}
+	withRef.forEach((visit) => {
+		selectedDebtors.value[getVisitKey(visit)] = visit.debtors.map((_: any, i: number) => i)
+	})
+
+	availableVisits.value = withRef
+}
+
 const fetchAvailableVisits = async () => {
 	try {
 		const response = await api.get('/visits/AvailableVisit')
-
-		availableVisits.value = response.data.results.sort((a: any, b: any) => {
-			return Number(a.sagsnr) - Number(b.sagsnr)
-		})
-
-		selectedDebtors.value = {}
-		availableVisits.value.forEach((visit) => {
-			const visitKey = getVisitKey(visit)
-			selectedDebtors.value[visitKey] = visit.debtors.map((_, i) => i)
-		})
-
-		// add field called sagvedr which is klientnavn and if klientnavn is SCB then also sagvedr
-		availableVisits.value = availableVisits.value.map((visit) => {
-			const normalizedKlientnavn = visit.klientnavn.replace(/\r\n/g, ' ').trim()
-			const klientRef = normalizedKlientnavn.includes(SCB_NAME)
-				? `SCB - ${visit.sagvedr}`
-				: normalizedKlientnavn.includes(NFD_NAME)
-					? `NFD`
-					: normalizedKlientnavn
-
-			return {
-				...visit,
-				klientRef,
-				klientnavn: klientRef, // FIX: set klientnavn to match klientRef for filtering
-			}
-		})
+		processVisits(response.data.results)
 		error.value = null
 	} catch (err: any) {
 		console.error(err)
 		errorApi.log('Error fetching available visits: ' + err.message)
 		error.value = 'Failed to fetch available visits'
+		availableVisits.value = []
+		errorApi.logError(err)
+	}
+}
+
+const fetchBySagsnr = async () => {
+	try {
+		const response = await api.post('/visits/AvailableVisitBySagsnr', {
+			sagsnr: parsedSagsnr.value,
+		})
+		processVisits(response.data.results)
+		error.value = null
+	} catch (err: any) {
+		console.error(err)
+		errorApi.log('Error fetching visits by sagsnr: ' + err.message)
+		error.value = 'Failed to fetch visits by sagsnr'
 		availableVisits.value = []
 		errorApi.logError(err)
 	}
