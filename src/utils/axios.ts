@@ -11,7 +11,20 @@ const api = axios.create({
 
 api.interceptors.response.use(
 	(r) => r,
-	(err) => Promise.reject(err),
+	async (err) => {
+		if (err.response?.status === 401) {
+			const { useAuthStore } = await import('@/stores/auth')
+			const { default: router } = await import('@/router')
+
+			const authStore = useAuthStore()
+			authStore.user = null
+
+			if (router.currentRoute.value.name !== 'login') {
+				router.push({ name: 'login' })
+			}
+		}
+		return Promise.reject(err)
+	},
 )
 
 export interface ErrorLogContext {

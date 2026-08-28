@@ -24,7 +24,6 @@ interface AuthState {
 	user: UserWithoutVisits | null
 	initializing: boolean
 }
-
 export const useAuthStore = defineStore('auth', {
 	state: (): AuthState => ({
 		user: null,
