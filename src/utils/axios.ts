@@ -11,13 +11,7 @@ const api = axios.create({
 
 api.interceptors.response.use(
 	(r) => r,
-	(err) => {
-		if (err.response?.status === 401 && !err.config?.url?.includes('/login')) {
-			// ponytail: redirect to login on any 401 except a failed login attempt itself
-			window.location.href = '/login'
-		}
-		return Promise.reject(err)
-	},
+	(err) => Promise.reject(err),
 )
 
 export interface ErrorLogContext {

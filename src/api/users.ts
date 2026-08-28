@@ -8,6 +8,9 @@ const MineResponseSchema = z.object({ user: UserWithVisitsSchema })
 export const usersApi = {
 	getAll: () => client.get('/users', UsersResponseSchema).then((r) => r.users),
 
+	getActingUser: () =>
+		client.get('/user', z.object({ user: UserWithoutVisitsSchema })).then((r) => r.user),
+
 	getUser: (userid: number) =>
 		client.get(`/visit-response/${userid}/user`, MineResponseSchema).then((r) => r.user),
 

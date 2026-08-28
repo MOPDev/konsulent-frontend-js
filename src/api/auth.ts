@@ -1,16 +1,23 @@
 import { client } from './client'
 import api from '@/utils/axios'
+import { UserWithoutVisits } from '@/schemas/index'
+import { usersApi } from '@/api/users'
+
+interface LoginResponse {
+	token: string
+	message: string
+	user: UserWithoutVisits
+}
 
 export const authApi = {
-  login: async (credentials: { username: string; password: string }) => {
-    const { data } = await api.post('/login', credentials)
-    return data as unknown
-  },
+	login: async (credentials: { username: string; password: string }) => {
+		const { data } = await api.post<LoginResponse>('/login', credentials)
+		return data
+	},
 
-  logout: () => client.post('/logout'),
+	logout: () => client.post('/logout'),
 
-  fetchUser: async () => {
-    const { data } = await api.get('/user')
-    return data as unknown
-  },
+	fetchUser: async () => {
+		return usersApi.getActingUser()
+	},
 }
