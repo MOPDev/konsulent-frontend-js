@@ -10,6 +10,7 @@
 import { ref, computed, type ComputedRef } from 'vue'
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
+import axios from 'axios'
 import type { VisitWithoutUserOrDebitors } from '@/schemas/index.js'
 
 const props = defineProps<{
@@ -52,7 +53,31 @@ async function printAll() {
 			}, 1000)
 		}
 	} catch (err) {
-		error.value = 'Fejl ved hentning af dokumenter'
+		let errorMessage = 'Der opstod en fejl under hentning af dokumenter.'
+
+		if (axios.isAxiosError(err)) {
+			const data = err.response?.data
+
+			if (data instanceof Blob) {
+				try {
+					// Read the blob content as a text string
+					const text = await data.text()
+					const json = JSON.parse(text)
+					errorMessage = json.error || json.message || text
+				} catch {
+					// If it fails to parse as JSON, fallback to err.message
+					errorMessage = err.message
+				}
+			} else if (typeof data === 'object' && data !== null) {
+				errorMessage = data.error || data.message || err.message
+			} else {
+				errorMessage = err.message
+			}
+		} else if (err instanceof Error) {
+			errorMessage = err.message
+		}
+
+		error.value = errorMessage
 		console.error(err)
 		errorApi.logError(err)
 	} finally {
