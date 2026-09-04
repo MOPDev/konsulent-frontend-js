@@ -75,6 +75,7 @@ import LetterForm from '@/components/forms/LetterForm.vue'
 
 import api from '@/utils/axios'
 import { errorApi } from '@/utils/axios'
+import { compressImage } from '@/utils/compressImage'
 import { visitsApi, type VisitWithDebitors } from '@/api/visits'
 
 interface ImageItem {
@@ -428,35 +429,37 @@ async function submitForm(visitId: number) {
 		}
 		responseId = data.ID
 
-		// Stage 2: upload visit images — collect per-file failures instead of aborting
+		// Stage 2: upload visit images — sequential so each gets full bandwidth
 		if (formData.images.length) {
 			submitStage.value = `Uploader ${formData.images.length} billede${formData.images.length > 1 ? 'r' : ''}...`
-			const results = await Promise.allSettled(
-				formData.images.map((img, i) => {
-					const fd = new FormData()
-					fd.append('visit_response_id', String(data.ID))
-					fd.append('image', img.file)
-					fd.append('sequence', String(i + 1))
-					return api.post(`/visit-response/${data.ID}/images`, fd, {
+			const failed = []
+			for (let i = 0; i < formData.images.length; i++) {
+				const img = formData.images[i]
+				const compressed = await compressImage(img.file)
+				const fd = new FormData()
+				fd.append('visit_response_id', String(data.ID))
+				fd.append('image', compressed)
+				fd.append('sequence', String(i + 1))
+				submitStage.value = `Uploader billede ${i + 1} af ${formData.images.length}...`
+				try {
+					await api.post(`/visit-response/${data.ID}/images`, fd, {
 						headers: { 'Content-Type': undefined },
+						timeout: 120 * 1000,
 					})
-				}),
-			)
-			const failed = results
-				.map((r, i) => ({ r, img: formData.images[i] }))
-				.filter((x) => x.r.status === 'rejected')
-			failed.forEach(({ r, img }) => {
-				errorApi
-					.logError(
-						(r as PromiseRejectedResult).reason,
-						logContext({
-							step: 'upload-image',
-							fileName: img?.name,
-							fileSize: img?.file.size,
-						}),
-					)
-					.catch(() => {})
-			})
+				} catch (e) {
+					failed.push({ r: e, img })
+					errorApi
+						.logError(
+							e,
+							logContext({
+								step: 'upload-image',
+								fileName: img?.name,
+								fileSize: img?.file.size,
+							}),
+						)
+						.catch(() => {})
+				}
+			}
 			if (failed.length) {
 				throw new Error(
 					`Kunne ikke uploade ${failed.length} af ${formData.images.length} billeder`,
@@ -474,21 +477,23 @@ async function submitForm(visitId: number) {
 
 		if (assetPairs.length) {
 			submitStage.value = `Uploader ${assetPairs.length} bilbillede${assetPairs.length > 1 ? 'r' : ''}...`
-			const results = await Promise.allSettled(
-				assetPairs.map((pair: { asset: any; match: OtherAsset | undefined }) => {
-					const fd = new FormData()
-					fd.append('image', pair.match!.image!.file)
-					return api.post(`/asset/${pair.asset.ID}/image`, fd, {
+			const failed = []
+			for (const pair of assetPairs) {
+				const fd = new FormData()
+				const compressed = await compressImage(pair.match!.image!.file)
+				fd.append('image', compressed)
+				try {
+					await api.post(`/asset/${pair.asset.ID}/image`, fd, {
 						headers: { 'Content-Type': undefined },
+						timeout: 120 * 1000,
 					})
-				}),
-			)
-			const failed = results.filter((r) => r.status === 'rejected')
-			failed.forEach((r) => {
-				errorApi
-					.logError((r as PromiseRejectedResult).reason, logContext({ step: 'upload-asset-image' }))
-					.catch(() => {})
-			})
+				} catch (e) {
+					failed.push(e)
+					errorApi
+						.logError(e, logContext({ step: 'upload-asset-image' }))
+						.catch(() => {})
+				}
+			}
 			if (failed.length) {
 				throw new Error(
 					`Kunne ikke uploade ${failed.length} af ${assetPairs.length} bilbilleder`,
