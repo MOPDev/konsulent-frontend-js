@@ -6,10 +6,7 @@
 			description="Fordi det er en leasingaftale, ejer skyldner ikke bilen. Derfor kan bilen tages/indrages uden skyldners kontrakt."
 			:debt="filteredData?.debt"
 		/>
-		<DebitorPanel
-			:debitor-name="filteredData?.debitors?.[0]?.name ?? '—'"
-			:doc-blob="docBlob"
-		/>
+		<DebitorPanel :debitors="filteredData?.debitors" :doc-blob="docBlob" />
 		<form @submit.prevent="emit('submit')">
 			<!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
 			<ContactSection

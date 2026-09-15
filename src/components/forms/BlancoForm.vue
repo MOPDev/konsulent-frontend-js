@@ -6,10 +6,7 @@
 			description="Skyldner har optaget et lån uden sikkerhedsstillelse. Afdæk skyldners nuværende livs- og økonomiske situation."
 			:debt="filteredData?.debt"
 		/>
-		<DebitorPanel
-			:debitor-name="filteredData?.debitors?.[0]?.name ?? '—'"
-			:doc-blob="docBlob"
-		/>
+		<DebitorPanel :debitors="filteredData?.debitors" :doc-blob="docBlob" />
 		<form @submit.prevent="emit('submit')">
 			<!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
 			<ContactSection

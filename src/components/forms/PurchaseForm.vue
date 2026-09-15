@@ -6,10 +6,7 @@
 			description="Fordi det er en købekontrakt, ejer skyldner bilen, men har ikke betalt restancen. Prøv at få dem til at underskrive salgsfuldmagten."
 			:debt="filteredData?.debt"
 		/>
-		<DebitorPanel
-			:debitor-name="filteredData?.debitors?.[0]?.name ?? '—'"
-			:doc-blob="docBlob"
-		/>
+		<DebitorPanel :debitors="filteredData?.debitors" :doc-blob="docBlob" />
 		<form @submit.prevent="emit('submit')">
 			<!-- ponytail: Pass show-worker-met computed from debitors list to ContactSection -->
 			<ContactSection
