@@ -26,7 +26,7 @@
 				</div>
 
 				<div v-if="group.key !== 'other'" class="group-actions" @click.stop>
-					<button @click="downloadGroupExcel(Number(group.key))" class="small-btn">
+					<button @click="downloadGroupExcel(group)" class="small-btn">
 						Download Excel
 					</button>
 					<button @click="openDateModal(group)" class="small-btn">Ændre dato</button>
@@ -440,13 +440,16 @@ const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisitIds.value = selectedIds
 }
 
-async function downloadGroupExcel(groupId: number) {
+async function downloadGroupExcel(group: VisitGroup) {
+	const groupId = Number(group.key)
 	try {
 		const response = await visitsApi.downloadGroupExcel(groupId)
 		const url = window.URL.createObjectURL(new Blob([response.data]))
 		const link = document.createElement('a')
 		link.href = url
-		link.setAttribute('download', `Gruppe_${groupId}_planlagte_besøg.xlsx`)
+		const date = group.date ? new Date(group.date).toISOString().split('T')[0] : 'udendato'
+		const name = (group.visits[0]?.konsulentName || 'IkkeTildeltKonsulent').replace(/\s+/g, '')
+		link.setAttribute('download', `${date}_${name}_planlagte_besøg.xlsx`)
 		document.body.appendChild(link)
 		link.click()
 		link.remove()
