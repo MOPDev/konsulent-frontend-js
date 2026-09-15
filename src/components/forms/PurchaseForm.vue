@@ -28,9 +28,10 @@
 				label="Er salgsfuldmagt (SF) underskrevet?"
 				name="sf_signed"
 				v-model="fd.asset.sf_signed"
-				:required="true"
+				:required="false"
 				class="mt-3"
 			/>
+			<!--was required -->
 
 			<PropertySection :form-data="fd" />
 

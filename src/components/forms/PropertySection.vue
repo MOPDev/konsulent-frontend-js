@@ -15,8 +15,9 @@
 				'Lejlighed',
 			]"
 			placeholder="Vælg boligtype"
-			:required="true"
+			:required="false"
 		/>
+		<!--was required -->
 
 		<fieldset class="mb-3 mt-2">
 			<legend>Iagttagelser / bemærkning til ejendom</legend>

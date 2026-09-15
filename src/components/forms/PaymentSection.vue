@@ -16,14 +16,14 @@
 						type="text"
 						inputmode="decimal"
 						class="form-control"
-						required
+						required="false"
 					/>
 				</fieldset>
 
 				<!-- ponytail: PaymentMethod select field added matching new backend struct model.PaymentQuestions -->
 				<fieldset class="mb-3">
 					<legend>Betalingsmetode</legend>
-					<select v-model="fd.payment.PaymentMethod" class="form-select" required>
+					<select v-model="fd.payment.PaymentMethod" class="form-select" required="false">
 						<option value="" disabled hidden>Vælg betalingsmetode</option>
 						<option value="Kontant">Kontant</option>
 						<option value="Bankoverførsel">Bankoverførsel</option>
@@ -39,11 +39,16 @@
 import { computed } from 'vue'
 import YesNo from '@/components/forms/YesNo.vue'
 
-const props = defineProps<{
-	formData: Record<string, unknown>
-	required?: boolean
-	showAmount?: boolean
-}>()
+const props = withDefaults(
+	defineProps<{
+		formData: Record<string, unknown>
+		required?: boolean
+		showAmount?: boolean
+	}>(),
+	{
+		required: false,
+	},
+)
 
 const fd = computed<any>({
 	get: () => props.formData,

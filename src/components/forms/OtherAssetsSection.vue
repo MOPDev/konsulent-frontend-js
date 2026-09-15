@@ -15,8 +15,8 @@
 						type="text"
 						class="form-control"
 						placeholder="Registreringsnummer (f.eks. AB12345)"
-						required
 					/>
+					<!--was required -->
 				</div>
 				<div class="col-auto">
 					<button type="button" @click="removeAsset(index)" class="btn btn-danger">

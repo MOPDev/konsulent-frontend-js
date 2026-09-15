@@ -5,8 +5,9 @@
 			label="Er bilen til stede på adressen?"
 			name="asset_seen"
 			v-model="fd.asset.asset_seen"
-			:required="true"
+			:required="false"
 		/>
+		<!--Used to be :required="true"-->
 
 		<Transition name="fade-slide" appear>
 			<div v-if="fd.asset.asset_seen" class="mt-3">
@@ -14,13 +15,15 @@
 					label="Kan man komme til bilen?"
 					name="asset_accessible"
 					v-model="fd.asset.asset_accessible"
-					:required="true"
+					:required="false"
 				/>
+				<!--Used to be :required="true"-->
 
 				<!-- ponytail: Asset status select dropdown mapping to models.AssetQuestions.AssetStatus string -->
 				<fieldset class="mb-3">
 					<legend>Bilens stand</legend>
-					<select v-model="fd.asset.asset_status" class="form-select" required>
+					<select v-model="fd.asset.asset_status" class="form-select">
+						<!--Used to be required-->
 						<option value="" disabled hidden>Vælg stand</option>
 						<option value="Perfekt">Perfekt</option>
 						<option value="Mindre ridser">Mindre ridser</option>
@@ -95,17 +98,19 @@
 			label="Er nøgler givet til konsulenten?"
 			name="asset_keys_delivered"
 			v-model="fd.asset.asset_keys_delivered"
-			:required="true"
+			:required="false"
 			class="mt-3"
 		/>
+		<!--Used to be :required="true"-->
 
 		<YesNo
 			label="Er bilen taget med / inddrevet?"
 			name="is_seized"
 			v-model="fd.asset.is_seized"
-			:required="true"
+			:required="false"
 			class="mt-3"
 		/>
+		<!--Used to be :required="true"-->
 
 		<Transition name="fade-slide" appear>
 			<div v-if="fd.asset.is_seized" class="mt-3">
@@ -147,14 +152,15 @@
 						type="text"
 						class="form-control"
 						placeholder="Beskriv aftalen"
-						required
 					/>
 				</fieldset>
+				<!--Used to be required -->
 
 				<!-- ponytail: TransportProvider select dropdown mapping to models.AssetQuestions.TransportProvider -->
 				<fieldset class="mb-3">
 					<legend>Transportør/udbyder</legend>
-					<select v-model="fd.asset.transport_provider" class="form-select" required>
+					<select v-model="fd.asset.transport_provider" class="form-select">
+						<!--Used to be required -->
 						<option value="" disabled hidden>Vælg transportør</option>
 						<option value="Grube (Sjælland)">Grube (Sjælland)</option>
 						<option value="John Baja Transport (Jylland)">
@@ -169,28 +175,14 @@
 				<!-- ponytail: Final vehicle location select dropdown mapping to models.AssetQuestions.FinalVehicleLocation -->
 				<fieldset class="mb-3 mt-3">
 					<legend>Endelig placering af bil</legend>
-					<select v-model="fd.asset.final_vehicle_location" class="form-select" required>
+					<select v-model="fd.asset.final_vehicle_location" class="form-select">
+						<!--Used to be required-->
 						<option value="" disabled hidden>Vælg placering</option>
-						<option value="Opbevaringsplads Sjælland">
-							Opbevaringsplads Sjælland
-							<!-- (Towing Storage Yard) -->
-						</option>
-						<option value="Opbevaringsplads Jylland">
-							Opbevaringsplads Jylland
-							<!-- (Towing Storage Yard) -->
-						</option>
-						<option value="Lokal forhandler">
-							Lokal forhandler
-							<!-- (Local Dealership) -->
-						</option>
-						<option value="På skyldners adresse">
-							På skyldners adresse
-							<!-- (At Debtor Address) -->
-						</option>
-						<option value="Andet">
-							Andet
-							<!-- (Other) -->
-						</option>
+						<option value="Opbevaringsplads Sjælland">Opbevaringsplads Sjælland</option>
+						<option value="Opbevaringsplads Jylland">Opbevaringsplads Jylland</option>
+						<option value="Lokal forhandler">Lokal forhandler</option>
+						<option value="På skyldners adresse">På skyldners adresse</option>
+						<option value="Andet">Andet</option>
 					</select>
 				</fieldset>
 
