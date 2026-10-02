@@ -41,7 +41,7 @@
 					:page-size="100"
 					v-model="selectedVisitIds"
 					@selection-ids-changed="handleSelectionChange"
-					:row-class="(item: any) => item.cancelled ? 'cancelled-row' : undefined"
+					:row-class="(item: any) => (item.cancelled ? 'cancelled-row' : undefined)"
 					:disable-selection-check="(item: any) => !!item.cancelled"
 				>
 					<template #cell-konsulentName="{ item }">
@@ -95,36 +95,36 @@ import { errorApi } from '@/utils/axios'
 import DataTable from './DataTable.vue'
 
 interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  filterable?: boolean
-  copyable?: boolean
+	key: string
+	label: string
+	sortable?: boolean
+	filterable?: boolean
+	copyable?: boolean
 }
 
 interface VisitData {
-  ID: number
-  sagsnr: number
-  address: string
-  visit_date: string
-  visit_time?: string
-  stop_nr?: number
-  group_id?: number | null
-  status?: { ID: number; text: string }
-  status_id?: number
-  konsulentName?: string
-  user?: { name: string }
-  debitors: Array<{ ID: number; name: string }>
-  type: { text: string }
-  visit_response?: { actual_time: string } | null
-  cancelled?: boolean | null
-  [key: string]: unknown
+	ID: number
+	sagsnr: number
+	address: string
+	visit_date: string
+	visit_time?: string
+	stop_nr?: number
+	group_id?: number | null
+	status?: { ID: number; text: string }
+	status_id?: number
+	konsulentName?: string
+	user?: { name: string }
+	debitors: Array<{ ID: number; name: string }>
+	type: { text: string }
+	visit_response?: { actual_time: string } | null
+	cancelled?: boolean | null
+	[key: string]: unknown
 }
 
 interface VisitGroup {
-  key: string
-  visits: VisitData[]
-  date: string | null
+	key: string
+	visits: VisitData[]
+	date: string | null
 }
 
 const columns: Column[] = [
@@ -176,7 +176,9 @@ const groupedVisits = computed<VisitGroup[]>(() => {
 		group.date = group.visits[0]?.visit_date ?? null
 	})
 
-	const sortedGroups = Object.values(groups).sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
+	const sortedGroups = Object.values(groups).sort(
+		(a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime(),
+	)
 
 	if (other.length > 0) {
 		other.sort((a, b) => {
@@ -268,7 +270,9 @@ async function moveToStatus5() {
 	success.value = []
 
 	try {
-		const result = (await visitsApi.markReviewed(selectedVisitIds.value.map((id) => Number(id)))) as any[]
+		const result = (await visitsApi.markReviewed(
+			selectedVisitIds.value.map((id) => Number(id)),
+		)) as any[]
 		const errors = result.filter((item: any) => item.err !== 'no error')
 		const imported = result.filter((item: any) => item.err === 'no error')
 		if (errors.length) {
