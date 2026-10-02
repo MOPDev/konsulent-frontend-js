@@ -1,81 +1,78 @@
 <template>
 	<div style="margin: 2rem">
-		<VisitMap
-			style="height: 700px; width: 70%; float: right"
-			:visits="visits"
-			:mode="mode"
-			:showRoute="showRoute"
-			:center="center"
-			:zoom="zoom"
-		/>
-	</div>
-
-	<div>
 		<h3>Arkiv</h3>
 		<p class="subtitle">Afsluttede besøg</p>
 
 		<div v-if="error" class="error">{{ error }}</div>
 
+		<div class="filters">
+			<input
+				v-model="filterSagsnr"
+				type="text"
+				placeholder="Sagsnr..."
+				class="filter-input"
+			/>
+			<select v-model="filterKonsulentId" class="filter-input">
+				<option value="">Alle konsulenter</option>
+				<option v-for="user in konsulenter" :key="user.ID" :value="user.ID">
+					{{ user.name }}
+				</option>
+			</select>
+			<input v-model="filterMonth" type="month" class="filter-input" title="Måned" />
+			<input v-model="filterFrom" type="date" class="filter-input" title="Fra dato" />
+			<input v-model="filterTo" type="date" class="filter-input" title="Til dato" />
+			<button @click="clearFilters">Ryd filtre</button>
+		</div>
+
+		<VisitMap style="height: 500px; width: 100%" :visits="filteredVisits" />
+
 		<div class="actions">
 			<button @click="requestPdfs" :disabled="!selectedVisitIds.length">
 				Hent PDF for valgte besøg ({{ selectedVisitIds.length }})
 			</button>
+			<span class="count">{{ filteredVisits.length }} besøg</span>
 		</div>
 
-		<div v-for="group in groupedVisits" :key="group.key" class="group-section">
-			<div class="group-header" @click="toggleGroup(group.key)">
-				<div class="group-title">
-					<span>{{ expandedGroups.has(group.key) ? '▼' : '▶' }}</span>
-					<h4 v-if="group.key !== 'other'">
-						{{ group.visits[0].konsulentName }} - {{ group.visits.length }} -
-						{{ formatDate(group.date) }}
-					</h4>
-					<h4 v-else>Andre besøg</h4>
+		<DataTable
+			:data="filteredVisits"
+			:columns="columns"
+			selectable
+			paginated
+			:page-size="100"
+			v-model="selectedVisitIds"
+			@selection-ids-changed="handleSelectionChange"
+		>
+			<template #cell-konsulentName="{ item }">
+				{{ item.konsulentName }}
+			</template>
+			<template #cell-debitors="{ item }">
+				<div v-for="debitor in item.debitors" :key="debitor.ID">
+					{{ debitor.name }}
 				</div>
-			</div>
-
-			<div v-if="expandedGroups.has(group.key)">
-				<DataTable
-					:ref="(el) => setTableRef(group.key, el)"
-					:data="group.visits"
-					:columns="columns"
-					selectable
-					filterable
-					paginated
-					:page-size="100"
-					v-model="selectedVisitIds"
-					@selection-ids-changed="handleSelectionChange"
-				>
-					<template #cell-konsulentName="{ item }">
-						{{ item.konsulentName }}
-					</template>
-					<template #cell-debitors="{ item }">
-						<div v-for="debitor in item.debitors" :key="debitor.ID">
-							{{ debitor.name }}
-						</div>
-					</template>
-					<template #cell-address="{ item }">
-						{{ formatAddress(item.address) }}
-					</template>
-					<template #cell-visit_date="{ item }">
-						{{ formatDate(item.visit_date) }}
-					</template>
-					<template #cell-status="{ item }">
-						<span v-if="item.status">{{ item.status.ID }}: {{ item.status.text }}</span>
-					</template>
-					<template #cell-group_id="{ item }">
-						<span v-if="item.group_id" class="group-badge">{{ item.group_id }}</span>
-					</template>
-				</DataTable>
-			</div>
-		</div>
+			</template>
+			<template #cell-address="{ item }">
+				{{ formatAddress(item.address) }}
+			</template>
+			<template #cell-visit_date="{ item }">
+				{{ formatDate(item.visit_date) }}
+			</template>
+			<template #cell-status="{ item }">
+				<span v-if="item.status">{{ item.status.ID }}: {{ item.status.text }}</span>
+			</template>
+			<template #cell-group_id="{ item }">
+				<span v-if="item.group_id" class="group-badge">{{ item.group_id }}</span>
+			</template>
+		</DataTable>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { visitsApi } from '@/api/visits'
 import type { VisitWithDebitors } from '@/api/visits'
+import { usersApi } from '@/api/users'
+import { USER_RIGHTS } from '@/stores/auth'
+import type { UserWithoutVisits } from '@/schemas'
 import { errorApi } from '@/utils/axios'
 import DataTable from './DataTable.vue'
 import VisitMap from './VisitMap.vue'
@@ -89,17 +86,6 @@ interface Column {
 }
 
 type ArchiveVisit = VisitWithDebitors & { konsulentName: string }
-
-interface VisitGroup {
-	key: string
-	visits: ArchiveVisit[]
-	date: string | null
-}
-
-const mode = ref<'view' | 'group'>('view')
-const showRoute = ref(false)
-const center: [number, number] = [11.5, 56.3]
-const zoom = 6 // larger number means more zoomed in
 
 const columns: Column[] = [
 	{ key: 'ID', label: 'ID', sortable: true, filterable: true },
@@ -118,52 +104,46 @@ const columns: Column[] = [
 ]
 
 const visits = ref<ArchiveVisit[]>([])
+const konsulenter = ref<UserWithoutVisits[]>([])
 const selectedVisitIds = ref<number[]>([])
 const error = ref<string | null>(null)
-const tableRefs = ref<Record<string, any>>({})
-const expandedGroups = ref<Set<string>>(new Set())
 
-const setTableRef = (key: string, el: any) => {
-	if (el) tableRefs.value[key] = el
-}
+const filterSagsnr = ref('')
+const filterKonsulentId = ref<number | ''>('')
+const filterMonth = ref('')
+const filterFrom = ref('')
+const filterTo = ref('')
 
-const groupedVisits = computed<VisitGroup[]>(() => {
-	const groups: Record<string, VisitGroup> = {}
-	const other: ArchiveVisit[] = []
+const filteredVisits = computed(() => {
+	const sagsnr = filterSagsnr.value.trim().toLowerCase()
+	return visits.value.filter((visit) => {
+		if (sagsnr && !String(visit.sagsnr).toLowerCase().includes(sagsnr)) return false
+		if (filterKonsulentId.value && visit.user_id !== Number(filterKonsulentId.value))
+			return false
 
-	visits.value.forEach((visit) => {
-		if (visit.group_id && visit.group_id !== 0) {
-			const key = String(visit.group_id)
-			if (!groups[key]) groups[key] = { key, visits: [], date: null }
-			groups[key].visits.push(visit)
-		} else {
-			other.push(visit)
-		}
+		const date = (visit.visit_date || '').slice(0, 10)
+		if (filterMonth.value && !date.startsWith(filterMonth.value)) return false
+		if (filterFrom.value && date < filterFrom.value) return false
+		if (filterTo.value && date > filterTo.value) return false
+		return true
 	})
-
-	Object.values(groups).forEach((group) => {
-		group.visits.sort((a, b) => (a.stop_nr ?? 0) - (b.stop_nr ?? 0))
-		group.date = group.visits[0]?.visit_date ?? null
-	})
-
-	const sortedGroups = Object.values(groups).sort(
-		(a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime(),
-	)
-
-	if (other.length > 0) {
-		other.sort((a, b) => {
-			const dateA = new Date(a.visit_date).getTime()
-			const dateB = new Date(b.visit_date).getTime()
-			if (dateA - dateB !== 0) return dateA - dateB
-			return (a.visit_time || '').localeCompare(b.visit_time || '')
-		})
-		sortedGroups.push({ key: 'other', visits: other, date: null })
-	}
-
-	return sortedGroups
 })
 
-onMounted(fetchVisits)
+watch([filterSagsnr, filterKonsulentId, filterMonth, filterFrom, filterTo], () => {
+	selectedVisitIds.value = []
+})
+
+function clearFilters() {
+	filterSagsnr.value = ''
+	filterKonsulentId.value = ''
+	filterMonth.value = ''
+	filterFrom.value = ''
+	filterTo.value = ''
+}
+
+onMounted(async () => {
+	await Promise.all([fetchVisits(), fetchKonsulenter()])
+})
 
 async function fetchVisits() {
 	try {
@@ -176,6 +156,16 @@ async function fetchVisits() {
 	} catch (err: any) {
 		console.error('Error fetching archived visits:', err)
 		error.value = 'Fejl ved hentning af arkiv: ' + err.message
+		errorApi.logError(err)
+	}
+}
+
+async function fetchKonsulenter() {
+	try {
+		const all = await usersApi.getAll()
+		konsulenter.value = all.filter((user) => user.rights === USER_RIGHTS.AUDITOR)
+	} catch (err: any) {
+		console.error('Error fetching users:', err)
 		errorApi.logError(err)
 	}
 }
@@ -194,15 +184,6 @@ function formatDate(date: string | null | undefined): string {
 
 const handleSelectionChange = (selectedIds: (number | string)[]) => {
 	selectedVisitIds.value = selectedIds.map(Number)
-}
-
-function toggleGroup(key: string) {
-	if (expandedGroups.value.has(key)) {
-		expandedGroups.value.delete(key)
-	} else {
-		expandedGroups.value.add(key)
-	}
-	expandedGroups.value = new Set(expandedGroups.value)
 }
 
 function requestPdfs() {
@@ -242,11 +223,50 @@ const getPdf = async (id: number) => {
 	margin-bottom: 1rem;
 }
 
-.actions {
+.filters {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.75rem;
 	margin-bottom: 1rem;
+}
+
+.filter-input {
+	padding: 0.5rem 0.75rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.375rem;
+	font-size: 0.875rem;
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s;
+}
+
+.filter-input:focus {
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filters button {
+	padding: 0.5rem 1rem;
+	border: 1px solid #d1d5db;
+	background: white;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	transition: all 0.2s;
+}
+
+.filters button:hover {
+	background-color: #f3f4f6;
+	border-color: #9ca3af;
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 1rem 0;
 }
 
 .actions button {
@@ -269,6 +289,11 @@ const getPdf = async (id: number) => {
 	cursor: not-allowed;
 }
 
+.count {
+	color: #6b7280;
+	font-size: 0.875rem;
+}
+
 .error {
 	color: red;
 	padding: 0.75rem;
@@ -276,35 +301,6 @@ const getPdf = async (id: number) => {
 	border: 1px solid #fcc;
 	border-radius: 0.25rem;
 	margin-bottom: 1rem;
-}
-
-.group-section {
-	margin-bottom: 2rem;
-}
-
-.group-header {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-between;
-	align-items: center;
-	gap: 0.75rem;
-	margin: 1rem 0 0.5rem 0;
-	cursor: pointer;
-	user-select: none;
-}
-.group-header:hover {
-	background-color: #f9fafb;
-}
-.group-title {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-.group-section h4 {
-	margin: 0;
-	color: #374151;
-	font-size: 1rem;
 }
 
 .group-badge {
@@ -318,13 +314,12 @@ const getPdf = async (id: number) => {
 }
 
 @media (max-width: 480px) {
-	.group-header {
-		flex-direction: column;
-		align-items: flex-start;
-	}
+	.filters,
 	.actions {
 		flex-direction: column;
 	}
+	.filter-input,
+	.filters button,
 	.actions button {
 		width: 100%;
 	}
