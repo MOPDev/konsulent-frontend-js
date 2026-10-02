@@ -5,6 +5,10 @@
 
 		<div v-if="error" class="error">{{ error }}</div>
 
+		<div v-if="success.length" class="success">
+			<div v-for="msg in success" :key="msg">{{ msg }}</div>
+		</div>
+
 		<div class="actions">
 			<button @click="moveToStatus5" :disabled="!selectedVisitIds.length">
 				Importer i Advopro ({{ selectedVisitIds.length }})
@@ -145,6 +149,7 @@ const columns: Column[] = [
 const visits = ref<VisitData[]>([])
 const selectedVisitIds = ref<(number | string)[]>([])
 const error = ref<string | null>(null)
+const success = ref<string[]>([])
 const tableRefs = ref<Record<string, any>>({})
 const expandedGroups = ref<Set<string>>(new Set())
 
@@ -230,6 +235,7 @@ function toggleGroup(key: string) {
 
 async function handleCancel(visit: any) {
 	error.value = null
+	success.value = []
 	try {
 		await visitsApi.cancelVisit(visit.ID)
 		visit.cancelled = true
@@ -242,6 +248,7 @@ async function handleCancel(visit: any) {
 
 async function handleUncancel(visit: any) {
 	error.value = null
+	success.value = []
 	try {
 		await visitsApi.uncancelVisit(visit.ID)
 		visit.cancelled = false
@@ -258,10 +265,12 @@ async function moveToStatus5() {
 		return
 	}
 	error.value = null
+	success.value = []
 
 	try {
 		const result = (await visitsApi.markReviewed(selectedVisitIds.value.map((id) => Number(id)))) as any[]
 		const errors = result.filter((item: any) => item.err !== 'no error')
+		const imported = result.filter((item: any) => item.err === 'no error')
 		if (errors.length) {
 			error.value = errors.map((item: any) => `ID ${item.id}: ${item.err}`).join('; ')
 		} else {
@@ -269,6 +278,10 @@ async function moveToStatus5() {
 			Object.values(tableRefs.value).forEach((t: any) => t?.clearSelection())
 			error.value = null
 		}
+		success.value = imported.map((item: any) => {
+			const visit = visits.value.find((v) => v.ID === Number(item.id))
+			return `Import af ${visit?.sagsnr ?? item.id} lykkedes`
+		})
 		fetchVisits()
 	} catch (err: any) {
 		console.error('Error moving visits to status 5:', err.request?.response)
@@ -277,6 +290,7 @@ async function moveToStatus5() {
 }
 
 function requestPdfs() {
+	success.value = []
 	selectedVisitIds.value.forEach((id) => getPdf(Number(id)))
 }
 
@@ -345,6 +359,15 @@ const getPdf = async (id: number) => {
 	padding: 0.75rem;
 	background-color: #fee;
 	border: 1px solid #fcc;
+	border-radius: 0.25rem;
+	margin-bottom: 1rem;
+}
+
+.success {
+	color: #15803d;
+	padding: 0.75rem;
+	background-color: #f0fdf4;
+	border: 1px solid #bbf7d0;
 	border-radius: 0.25rem;
 	margin-bottom: 1rem;
 }
