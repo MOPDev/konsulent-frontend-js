@@ -184,8 +184,8 @@ const groupedVisits = computed<VisitGroup[]>(() => {
 		other.sort((a, b) => {
 			const dateA = new Date(a.visit_date).getTime()
 			const dateB = new Date(b.visit_date).getTime()
-			if (dateB - dateA !== 0) return dateB - dateA
-			return (b.visit_time || '').localeCompare(a.visit_time || '')
+			if (dateB - dateA !== 0) return dateA - dateB
+			return (a.visit_time || '').localeCompare(b.visit_time || '')
 		})
 		sortedGroups.push({ key: 'other', visits: other, date: null })
 	}
